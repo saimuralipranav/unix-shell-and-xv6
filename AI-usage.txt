@@ -1,0 +1,3215 @@
+Submission
+
+[Updated instructions] You are required to submit your code via Moodle. Ensure that your submission contains the .git folder. Do not submit any build files (run make clean before zipping your folder).
+
+However, you NEED to maintain a git repository for the duration of the project and commit iteratively as you go. Making a bunch of big commits right before the deadline may result in penalization.
+
+And before you ask: you DO NOT need a GitHub repo to maintain a git repo. You can initialize one locally and keep it there until we figure out submission.
+
+You can refer to the resource on git for more details.
+
+Make sure your repository has the following structure:
+
+mini-project1/
+├── c-shell/
+│   ├── src/
+│   ├── include/
+│   └── Makefile
+├── xv6/
+│   ├── user/
+│   ├── mkfs/
+│   ├── kernel/
+│   ├── Makefile
+│   └── report.md    # Or report.pdf
+├── AI-usage.pdf
+└── README.mdhow to deal with this project, given no github classroom or anything is created and they are asking to maintain one, how does things work later
+
+Basically, you maintain everything locally with Git. GitHub Classroom is not required.
+
+What you do now
+
+Your project folder should be:
+
+mini-project1/
+├── c-shell/
+├── xv6/
+├── AI-usage.pdf
+└── README.md
+
+Initialize Git inside mini-project1:
+
+cd mini-project1
+git init
+git add .
+git commit -m "Initial project setup"
+
+Then, as you work, make commits regularly:
+
+git add .
+git commit -m "Implement shell lexer"
+
+You do not need GitHub or any remote repository.
+
+What happens later?
+
+When submission opens on Moodle, you'll simply:
+
+Finish your work.
+
+Run:
+
+make clean
+
+in the relevant projects.
+
+Do NOT delete .git/.
+Zip the entire mini-project1/ folder, including .git/.
+Upload that ZIP to Moodle.
+
+The TA can then inspect your Git history to see that you actually developed iteratively rather than making 30 huge commits the night before.
+
+Important
+
+Your .git folder should be at:
+
+mini-project1/.git/
+
+not separately inside only c-shell or xv6.
+
+So the basic workflow is:
+
+Work → git add → git commit → continue working → commit again → final make clean → ZIP entire folder including .git → Moodle.
+
+You don't need to worry about creating a repository somewhere else unless the instructors later specifically tell you to.
+
+
+
+
+
+
+what should i put in gitignore for a c shell project like this  
+
+For your C-shell project, a simple .gitignore is enough:
+
+# Build files
+*.o
+*.a
+*.so
+
+# Executables
+c-shell
+*.out
+
+# Build directory
+build/
+
+# Editor/IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+
+But important for your assignment: don't ignore anything the TA expects to be submitted. In particular, do not ignore .git/ — Git manages that separately, and it will be included when you zip the project.
+
+If your Makefile creates a specific executable name (e.g. cshell), add that name too
+
+
+
+
+
+how does the things work for this project till this part, whcih corresponds to mid submission
+
+For the mid submission, based on the project specification you uploaded, you are essentially expected to have completed Part A + Part B:
+
+Part A — Shell Input (20 marks)
+Prompt
+User input
+Lexer
+Parser/grammar validation
+Invalid syntax handling
+Part B — Shell Intrinsics (40 marks)
+hop
+reveal
+peek
+locate
+
+So your Git history up to mid-submission should show incremental commits implementing these, rather than Part C.
+
+A sensible progression would look like:
+
+Commit 1  Repository setup
+Commit 2  Makefile
+Commit 3  State initialization
+Commit 4  Prompt display
+Commit 5  Main loop
+Commit 6  Lexer definitions
+Commit 7  Basic lexing
+Commit 8  Quoting and escaping
+Commit 9  Lexer error handling
+Commit 10 Parser/grammar
+Commit 11 Syntax validation
+Commit 12 hop
+Commit 13 Frecency
+Commit 14 reveal
+Commit 15 peek
+Commit 16 locate
+...
+
+Part C starts after that: command execution, redirection, and pipes.
+
+So if you're currently at the mid-submission point, don't implement Part C yet just for the sake of having more code. Your Git history should demonstrate the A → B progression.
+
+
+
+
+
+no, thats the entirity for mid submission and there are other things after
+
+Ah, yes — you're right. I misread the scope. 👍
+
+The entire Part A + B + C shown in this file is the mid-submission scope, not the whole project.
+
+So, up to mid submission, your implementation covers:
+
+Part A — Shell Input
+Prompt
+Input
+Lexer
+Parser/grammar validation
+Part B — Shell Intrinsics
+hop
+reveal
+peek
+locate
+Part C — File Redirection & Pipes
+Command execution
+Input redirection <
+Output redirection > / >>
+Pipes |
+
+So your mid-submission Git history should eventually demonstrate work through C4, not stop at Part B.
+
+If you give me the rest of the project spec, I can tell you exactly where mid-submission ends and what comes after, without guessing.
+
+
+
+
+
+Before you start
+
+This is an individual assignment.
+
+svgDeadlines
+
+There are two submissions for this assignment. You are expected to submit parts A to C of C-Shell for the mid-submission, and remainder of the assignment for the end-submission.
+
+Mid-submission: August 25, 11:59 pm
+End-submission: September 13, 11:59 pm
+
+You may use your late days for both of the submissions.
+
+svgSubmission
+
+[Updated instructions] You are required to submit your code via Moodle. Ensure that your submission contains the .git folder. Do not submit any build files (run make clean before zipping your folder).
+
+However, you NEED to maintain a git repository for the duration of the project and commit iteratively as you go. Making a bunch of big commits right before the deadline may result in penalization.
+
+And before you ask: you DO NOT need a GitHub repo to maintain a git repo. You can initialize one locally and keep it there until we figure out submission.
+
+You can refer to the resource on git for more details.
+
+Make sure your repository has the following structure:
+
+mini-project1/
+├── c-shell/
+│   ├── src/
+│   ├── include/
+│   └── Makefile
+├── xv6/
+│   ├── user/
+│   ├── mkfs/
+│   ├── kernel/
+│   ├── Makefile
+│   └── report.md    # Or report.pdf
+├── AI-usage.pdf
+└── README.md
+
+Copy
+
+svgAI Usage
+
+You are allowed to use AI tools as long as you acknowledge and document it. Include the prompt you used and a screenshot of the output in a pdf called AI-usage.pdf. You are expected to understand any code you generate. Improperly acknowledged AI use may be awarded a 0.
+
+svgGrading
+
+Mid-submissions and end-submissions will be graded separately. For parts due by mid-submission, you will receive 100% of the marks, if the submission is complete by then. If it is not completed by mid-submission but is fully completed by end-submission, you will receive 50% for that part. If a part is partially completed, marks will be awarded based on linear interpolation according to the extent of completion. Any remaining portion completed after the mid-submission will receive 50% of the marks alloted to that part.
+
+You will be graded based on both your implementation and an in-person evaluation with a TA. You are expected to understand the code that you submit.
+
+Yes — this confirms it clearly. The assignment has two submission checkpoints:
+
+Mid-submission (Aug 25): Parts A–C
+End-submission (Sep 13): everything remaining after Part C
+
+And importantly, mid and end are graded separately. If something from A–C isn't finished by mid but is finished by end, that portion gets 50% of its marks, rather than full marks.
+
+For your Git workflow, this means:
+
+Now → Mid submission
+      ↓
+      A + B + C complete
+      ↓
+      Commit history preserved
+      ↓
+      make clean
+      ↓
+      ZIP including .git
+      ↓
+      Moodle
+
+After mid → End submission
+             ↓
+             Continue same Git repository
+             ↓
+             Implement remaining parts
+             ↓
+             Final ZIP including .git
+             ↓
+             Moodle
+
+You do not create a new repository after mid. Keep using the same local repository throughout the entire project.
+
+Also, AI-usage.pdf and README.md are part of the overall submission structure, alongside c-shell and xv6.
+
+
+
+
+
+Start with the repository structure first, before implementing anything.
+
+1. Create the project folder
+mkdir mini-project1
+cd mini-project1
+
+mkdir c-shell
+mkdir xv6
+2. Initialize Git
+git init
+3. Set up c-shell
+cd c-shell
+mkdir src include
+touch Makefile
+cd ..
+
+Then put your xv6 code in xv6/ when you start that part.
+
+4. Add .gitignore
+
+At mini-project1/.gitignore:
+
+*.o
+*.out
+build/
+.vscode/
+.idea/
+.DS_Store
+5. Make the first commit
+git add .
+git commit -m "Initial project setup"
+
+Now you have the repository that you'll maintain all the way from mid-submission to end-submission.
+
+6. Then start C-Shell incrementally
+
+Your implementation order should roughly be:
+
+A1  Prompt
+A2  Input
+A3  Lexer
+A3  Parser
+
+B1  hop
+B2  reveal
+B3  peek
+B4  locate
+
+C1  Command execution
+C2  Input redirection
+C3  Output redirection
+C4  Pipes
+
+And commit after meaningful completed pieces, e.g.:
+
+git add .
+git commit -m "Implement shell prompt"
+
+Don't try to create the entire project structure for the final submission right now. Build it incrementally. That's exactly what the Git requirement is trying to capture.
+
+
+
+
+
+
+gimme the makefile, i dont think i need to waste time on creating it myself
+
+Yep. Use this Makefile in c-shell/:
+
+CC = gcc
+CFLAGS = -std=c23 -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700 \
+         -Wall -Wextra -Werror -Wno-unused-parameter -fno-asm
+
+TARGET = shell.out
+SRC = $(wildcard src/*.c)
+OBJ = $(SRC:.c=.o)
+
+all: $(TARGET)
+
+$(TARGET): $(OBJ)
+	$(CC) $(CFLAGS) -o $@ $^
+
+src/%.o: src/%.c
+	$(CC) $(CFLAGS) -Iinclude -c $< -o $@
+
+clean:
+	rm -f $(OBJ) $(TARGET)
+
+.PHONY: all clean
+
+This matches the required compiler flags and produces shell.out in c-shell/ when you run:
+
+make all
+
+And later:
+
+make clean
+
+removes the build files before submission. The assignment explicitly requires the final build to produce shell.out.
+
+
+
+
+
+
+For A1, keep it simple: you need three pieces of state:
+
+home_dir → directory where the shell started
+current working directory → getcwd()
+username + hostname → getpwuid() and gethostname()
+
+A clean implementation could be:
+
+#include <stdio.h>
+#include <unistd.h>
+#include <pwd.h>
+#include <limits.h>
+#include <string.h>
+
+void print_prompt(const char *home_dir)
+{
+    char cwd[PATH_MAX];
+    char hostname[HOST_NAME_MAX + 1];
+
+    getcwd(cwd, sizeof(cwd));
+    gethostname(hostname, sizeof(hostname));
+
+    struct passwd *pw = getpwuid(getuid());
+
+    char display_path[PATH_MAX];
+
+    if (strcmp(cwd, home_dir) == 0) {
+        strcpy(display_path, "~");
+    } else if (strncmp(cwd, home_dir, strlen(home_dir)) == 0 &&
+               cwd[strlen(home_dir)] == '/') {
+        snprintf(display_path, sizeof(display_path),
+                 "~%s", cwd + strlen(home_dir));
+    } else {
+        strcpy(display_path, cwd);
+    }
+
+    printf("<%s@%s:%s> ", pw->pw_name, hostname, display_path);
+    fflush(stdout);
+}
+
+Then in main():
+
+int main(void)
+{
+    char home_dir[PATH_MAX];
+
+    getcwd(home_dir, sizeof(home_dir));
+
+    while (1) {
+        print_prompt(home_dir);
+
+        // later: read input here
+    }
+
+    return 0;
+}
+Why this satisfies A1
+
+If you start the shell at:
+
+/home/pranav/project
+
+then:
+
+/home/pranav/project        → ~
+/home/pranav/project/src    → ~/src
+/tmp                        → /tmp
+
+The important part is capture home_dir once at startup. Don't use $HOME, because the assignment specifically says the directory where your shell is started becomes its home directory.
+
+For your project structure, I'd put print_prompt() in something like src/prompt.c with its declaration in include/prompt.h, rather than putting everything in main.c, since the assignment explicitly requires multiple .c/.h files by functionality.
+
+
+
+
+
+
+A2: User Input [2]
+
+Requirements:
+
+The shell should allow a user to type input.
+On enter/return, the shell should consume the input.
+After consuming input, the shell should display the prompt again.
+You may assume that the user input shall be limited to a max of 1024 characters.
+
+Example
+
+<goatam@iiit:~> Hi there guys!
+<goatam@iiit:~> This shell is cool!
+<goatam@iiit:~>
+this?
+
+Yes. For A2, build directly on A1.
+
+The simplest approach is fgets() with a 1024-byte buffer:
+
+#define MAX_INPUT 1025
+
+char input[MAX_INPUT];
+
+while (1) {
+    print_prompt(home_dir);
+
+    if (fgets(input, sizeof(input), stdin) == NULL) {
+        break;  // EOF (Ctrl+D)
+    }
+
+    // Remove the trailing newline
+    input[strcspn(input, "\n")] = '\0';
+
+    // For now, just consume the input.
+    // Parser/execution will come later.
+}
+
+You need:
+
+#include <string.h>
+What happens
+
+User enters:
+
+<user@host:~> hello world
+
+fgets() stores:
+
+"hello world\n"
+
+Then strcspn() removes the \n, leaving:
+
+"hello world"
+
+The loop repeats → prompt appears again.
+
+For now, you don't need to do anything with the input. A3 will take this input and lex/parse it.
+
+
+
+
+
+
+For A3, I’d split it into two separate modules:
+
+c-shell/
+├── src/
+│   ├── main.c
+│   ├── prompt.c
+│   ├── lexer.c
+│   └── parser.c
+└── include/
+    ├── prompt.h
+    ├── lexer.h
+    └── parser.h
+1. Lexer
+
+lexer.c takes:
+
+echo "hello > world" | cat
+
+and produces something like:
+
+WORD("echo")
+WORD("hello > world")
+OP_PIPE
+WORD("cat")
+
+It handles:
+
+whitespace
+| & ; < > >>
+unquoted words
+'single quotes'
+"double quotes"
+\ escaping
+>> as one token
+unclosed quotes → invalid syntax
+trailing \ → invalid syntax
+
+This is the character-by-character scanner.
+
+2. Parser
+
+parser.c takes the tokens from the lexer and checks whether their sequence follows the grammar.
+
+For example:
+
+echo hello > out.txt
+
+is valid:
+
+WORD WORD OP_GT WORD
+
+But:
+
+echo hello >
+
+is invalid because > requires a TGT (WORD) after it.
+
+Likewise:
+
+| sort
+
+is invalid because a line cannot start with OP_PIPE.
+
+3. Don't build an AST
+
+The assignment explicitly says you don't need one.
+
+A simple token array/linked list is enough and will later be useful for Part C, because you'll need to know where pipes and redirections are.
+
+Recommended implementation order
+A3.1  Define token types + Token struct
+A3.2  Implement basic lexer
+A3.3  Add >> / operators
+A3.4  Add escaping
+A3.5  Add single/double quotes
+A3.6  Add lexical error detection
+A3.7  Implement grammar parser
+A3.8  Test valid/invalid examples
+
+So don't try to implement the whole A3 in one giant function. Build the lexer first, test it, then build the
+
+
+
+
+
+Very straightforward: while scanning the line, maintain the current quote state.
+
+char quote = '\0';  // no quote currently open
+
+for (int i = 0; input[i] != '\0'; i++) {
+    char c = input[i];
+
+    if (quote == '\0') {
+        if (c == '\'' || c == '"') {
+            quote = c;              // open quote
+        } else if (c == '\\') {
+            if (input[i + 1] == '\0') {
+                // '\' is the final character
+                return INVALID;
+            }
+            i++;                    // consume escaped character
+        }
+    }
+    else if (quote == '\'' ) {
+        if (c == '\'')
+            quote = '\0';           // close single quote
+    }
+    else if (quote == '"') {
+        if (c == '\\') {
+            if (input[i + 1] == '\0')
+                return INVALID;
+            i++;                    // consume escaped character
+        }
+        else if (c == '"') {
+            quote = '\0';           // close double quote
+        }
+    }
+}
+
+Then after the loop:
+
+if (quote != '\0') {
+    return INVALID;  // unclosed quote
+}
+
+So the two checks are:
+
+trailing \        → detect immediately
+unclosed quote    → detect after scanning entire line
+
+For example:
+
+echo "hello
+     ↑
+quote remains open → invalid
+
+echo hello\
+           ↑
+next character is '\0' → invalid
+
+This directly matches the two lexical errors specified in A3.
+
+
+
+
+
+
+Yes. At this point, implement A3 as lexer + parser. The cleanest edit is to add these files:
+
+src/
+├── main.c
+├── prompt.c
+├── lexer.c
+└── parser.c
+
+include/
+├── prompt.h
+├── lexer.h
+└── parser.h
+1. include/lexer.h
+#ifndef LEXER_H
+#define LEXER_H
+
+typedef enum {
+    TOKEN_WORD,
+    TOKEN_PIPE,
+    TOKEN_AMP,
+    TOKEN_SEMI,
+    TOKEN_LT,
+    TOKEN_GT,
+    TOKEN_GTGT
+} TokenType;
+
+typedef struct Token {
+    TokenType type;
+    char *value;
+    struct Token *next;
+} Token;
+
+Token *lex_line(const char *input);
+void free_tokens(Token *tokens);
+
+#endif
+2. src/lexer.c
+#include "lexer.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+static Token *new_token(TokenType type, const char *value)
+{
+    Token *token = malloc(sizeof(Token));
+    if (token == NULL)
+        return NULL;
+
+    token->type = type;
+    token->value = value ? strdup(value) : NULL;
+    token->next = NULL;
+
+    if (value && token->value == NULL) {
+        free(token);
+        return NULL;
+    }
+
+    return token;
+}
+
+static void append_token(Token **head, Token **tail, Token *token)
+{
+    if (*head == NULL)
+        *head = token;
+    else
+        (*tail)->next = token;
+
+    *tail = token;
+}
+
+Token *lex_line(const char *input)
+{
+    Token *head = NULL;
+    Token *tail = NULL;
+    size_t i = 0;
+
+    while (input[i] != '\0') {
+
+        if (isspace((unsigned char)input[i])) {
+            i++;
+            continue;
+        }
+
+        /* Operators */
+        if (input[i] == '|') {
+            append_token(&head, &tail, new_token(TOKEN_PIPE, "|"));
+            i++;
+            continue;
+        }
+
+        if (input[i] == '&') {
+            append_token(&head, &tail, new_token(TOKEN_AMP, "&"));
+            i++;
+            continue;
+        }
+
+        if (input[i] == ';') {
+            append_token(&head, &tail, new_token(TOKEN_SEMI, ";"));
+            i++;
+            continue;
+        }
+
+        if (input[i] == '<') {
+            append_token(&head, &tail, new_token(TOKEN_LT, "<"));
+            i++;
+            continue;
+        }
+
+        if (input[i] == '>') {
+            if (input[i + 1] == '>') {
+                append_token(&head, &tail, new_token(TOKEN_GTGT, ">>"));
+                i += 2;
+            } else {
+                append_token(&head, &tail, new_token(TOKEN_GT, ">"));
+                i++;
+            }
+            continue;
+        }
+
+        /* WORD */
+        char word[1025];
+        size_t j = 0;
+
+        while (input[i] != '\0' &&
+               !isspace((unsigned char)input[i]) &&
+               input[i] != '|' &&
+               input[i] != '&' &&
+               input[i] != ';' &&
+               input[i] != '<' &&
+               input[i] != '>') {
+
+            char c = input[i];
+
+            /* Backslash outside quotes */
+            if (c == '\\') {
+                if (input[i + 1] == '\0') {
+                    printf("cshell: invalid syntax\n");
+                    free_tokens(head);
+                    return NULL;
+                }
+
+                word[j++] = input[i + 1];
+                i += 2;
+                continue;
+            }
+
+            /* Single quote */
+            if (c == '\'') {
+                i++;
+
+                while (input[i] != '\'' && input[i] != '\0')
+                    word[j++] = input[i++];
+
+                if (input[i] == '\0') {
+                    printf("cshell: invalid syntax\n");
+                    free_tokens(head);
+                    return NULL;
+                }
+
+                i++;
+                continue;
+            }
+
+            /* Double quote */
+            if (c == '"') {
+                i++;
+
+                while (input[i] != '"' && input[i] != '\0') {
+                    if (input[i] == '\\') {
+                        if (input[i + 1] == '\0') {
+                            printf("cshell: invalid syntax\n");
+                            free_tokens(head);
+                            return NULL;
+                        }
+
+                        if (input[i + 1] == '"' ||
+                            input[i + 1] == '\\') {
+                            word[j++] = input[i + 1];
+                            i += 2;
+                        } else {
+                            word[j++] = input[i++];
+                            word[j++] = input[i++];
+                        }
+                    } else {
+                        word[j++] = input[i++];
+                    }
+                }
+
+                if (input[i] == '\0') {
+                    printf("cshell: invalid syntax\n");
+                    free_tokens(head);
+                    return NULL;
+                }
+
+                i++;
+                continue;
+            }
+
+            word[j++] = c;
+            i++;
+        }
+
+        word[j] = '\0';
+
+        if (j > 0) {
+            Token *token = new_token(TOKEN_WORD, word);
+
+            if (token == NULL) {
+                free_tokens(head);
+                return NULL;
+            }
+
+            append_token(&head, &tail, token);
+        }
+    }
+
+    return head;
+}
+
+void free_tokens(Token *tokens)
+{
+    while (tokens != NULL) {
+        Token *next = tokens->next;
+        free(tokens->value);
+        free(tokens);
+        tokens = next;
+    }
+}
+3. include/parser.h
+#ifndef PARSER_H
+#define PARSER_H
+
+#include "lexer.h"
+
+int parse_line(Token *tokens);
+
+#endif
+4. src/parser.c
+
+The grammar is right-linear, so you can implement it as a small state machine.
+
+#include "parser.h"
+
+static int is_word(Token *t)
+{
+    return t != NULL && t->type == TOKEN_WORD;
+}
+
+/*
+ * ARG -> ε
+ *      | WORD ARG
+ *      | < TGT
+ *      | > TGT
+ *      | >> TGT
+ *      | | CMD
+ *      | ; CMD
+ *      | & BG
+ */
+static int parse_arg(Token **current);
+
+static int parse_cmd(Token **current)
+{
+    if (!is_word(*current))
+        return 0;
+
+    (*current)++;
+    return parse_arg(current);
+}
+
+static int parse_tgt(Token **current)
+{
+    if (!is_word(*current))
+        return 0;
+
+    (*current)++;
+    return parse_arg(current);
+}
+
+static int parse_bg(Token **current)
+{
+    if (*current == NULL)
+        return 1;
+
+    if (!is_word(*current))
+        return 0;
+
+    (*current)++;
+    return parse_arg(current);
+}
+
+static int parse_arg(Token **current)
+{
+    if (*current == NULL)
+        return 1;
+
+    switch ((*current)->type) {
+
+    case TOKEN_WORD:
+        (*current)++;
+        return parse_arg(current);
+
+    case TOKEN_LT:
+    case TOKEN_GT:
+    case TOKEN_GTGT:
+        (*current)++;
+        return parse_tgt(current);
+
+    case TOKEN_PIPE:
+    case TOKEN_SEMI:
+        (*current)++;
+        return parse_cmd(current);
+
+    case TOKEN_AMP:
+        (*current)++;
+        return parse_bg(current);
+    }
+
+    return 0;
+}
+
+int parse_line(Token *tokens)
+{
+    if (tokens == NULL)
+        return 1;       /* empty line is valid */
+
+    if (!is_word(tokens))
+        return 0;       /* LINE must begin with WORD */
+
+    tokens = tokens->next;
+
+    return parse_arg(&tokens) && tokens == NULL;
+}
+5. In main.c
+
+After A2's fgets():
+
+#include "lexer.h"
+#include "parser.h"
+
+Then:
+
+Token *tokens = lex_line(input);
+
+if (tokens == NULL) {
+    continue;
+}
+
+if (!parse_line(tokens)) {
+    printf("cshell: invalid syntax\n");
+}
+
+free_tokens(tokens);
+
+So your loop becomes roughly:
+
+while (1) {
+    print_prompt(home_dir);
+
+    if (fgets(input, sizeof(input), stdin) == NULL)
+        break;
+
+    input[strcspn(input, "\n")] = '\0';
+
+    Token *tokens = lex_line(input);
+
+    if (tokens == NULL)
+        continue;
+
+    if (!parse_line(tokens))
+        printf("cshell: invalid syntax\n");
+
+    free_tokens(tokens);
+}
+One important correction
+
+Because empty/whitespace-only input is valid, lex_line() returning NULL is currently ambiguous: it can mean either empty input or lexical error. For a proper implementation, your lexer should return an explicit success/error status rather than using NULL for both.
+
+That is the next edit I'd make before moving on to B1.
+
+
+
+
+
+
+
+
+Frecency
+
+Keep a persistent record of directories hopped into, across shell sessions.
+
+Every successful hop updates that directory’s standing.
+Standing depends on both frequency and recency of visits.
+When “name” doesn’t resolve directly, hop into the highest ranked directory whose path contains “name” as a substring.
+If the top match no longer exists on disk, skip it and try the next best.
+
+Scoring, decay, and storage are up to you, but must be deterministic.
+
+Resource: same idea behind zoxide’s cd replacement: 
+https://github.com/ajeetdsouza/zoxide/wiki/Algorithm
+what is this
+
+It basically means hop should remember directories you visit frequently, so later you can type a short name and jump there.
+
+Example:
+
+hop /home/pranav/projects
+hop /home/pranav/Downloads
+hop /home/pranav/projects
+hop /home/pranav/projects
+
+Your shell stores something like:
+
+Directory                 Visits    Recent
+/home/pranav/projects       3        high
+/home/pranav/Downloads      1        medium
+
+Later:
+
+hop proj
+
+If proj isn't a direct path, search your stored directories for paths containing "proj":
+
+/home/pranav/projects
+/home/pranav/old-projects
+
+Then choose the highest-ranked one.
+
+What does "frequency + recency" mean?
+
+You get to choose the exact formula. For example:
+
+score = frequency × 10 + recency_score
+
+So a directory visited many times gets a high score, but recently visited directories also get boosted.
+
+"Persistent across sessions"
+
+This is the important part.
+
+If you close your shell:
+
+./shell.out
+hop ~/projects
+exit
+
+and start it again tomorrow, the shell should still remember ~/projects.
+
+So you need to save the data somewhere, e.g.:
+
+~/.cshell_frecency
+
+Conceptually:
+
+path=/home/pranav/projects visits=5 last_visit=...
+path=/home/pranav/Downloads visits=2 last_visit=...
+
+You do not need to copy zoxide's algorithm. The assignment explicitly says the scoring, decay, and storage method are up to you; it only points you toward zoxide as inspiration.
+
+For this project, I'd implement a simple deterministic frequency + timestamp score rather than trying to recreate zoxide.
+
+
+
+
+
+
+For B1, I'd implement it in four pieces:
+
+hop.c
+├── basic directory handling
+├── previous-directory tracking
+├── direct path resolution
+└── frecency storage/lookup
+1. Basic hop
+
+Keep two paths in your shell state:
+
+char home_dir[PATH_MAX];
+char prev_dir[PATH_MAX];
+int has_prev_dir;
+
+Then:
+
+int hop_to(const char *arg)
+{
+    char old_dir[PATH_MAX];
+    char target[PATH_MAX];
+
+    if (getcwd(old_dir, sizeof(old_dir)) == NULL)
+        return -1;
+
+    if (strcmp(arg, "~") == 0) {
+        strcpy(target, home_dir);
+    }
+    else if (strcmp(arg, ".") == 0) {
+        return 0;
+    }
+    else if (strcmp(arg, "..") == 0) {
+        strcpy(target, "..");
+    }
+    else if (strcmp(arg, "-") == 0) {
+        if (!has_prev_dir)
+            return 0;
+
+        strcpy(target, prev_dir);
+    }
+    else {
+        strcpy(target, arg);
+    }
+
+    if (chdir(target) == 0) {
+        strcpy(prev_dir, old_dir);
+        has_prev_dir = 1;
+
+        return 0;
+    }
+
+    return -1;
+}
+2. Handle multiple arguments
+
+The requirement says arguments execute sequentially:
+
+hop goatam/osnmp1 .. -
+
+So:
+
+for (int i = 1; i < argc; i++) {
+    if (hop_to(argv[i]) != 0) {
+        // try frecency here
+        printf("hop: no such directory\n");
+    }
+}
+
+This means after the first hop, the second argument operates on the new CWD.
+
+3. Direct path before frecency
+
+For a normal name:
+
+if (chdir(arg) == 0) {
+    // successful direct path
+}
+else {
+    // search frecency
+}
+
+This automatically handles both:
+
+hop foo
+hop /tmp/foo
+
+and allows paths outside the home directory, which the assignment explicitly requires.
+
+4. Frecency
+
+Keep a file such as:
+
+~/.cshell_frecency
+
+with entries like:
+
+/path/to/project 5 1756123000
+/path/to/downloads 2 1756122900
+
+Meaning:
+
+path    frequency    last_visit
+
+When a direct chdir(name) fails:
+
+Read the saved entries.
+Keep entries whose path contains name.
+Ignore directories that no longer exist.
+Calculate a deterministic score from frequency + recency.
+Pick the highest score.
+chdir() there.
+Update its frequency and timestamp.
+
+For example:
+
+score = frequency * 1000000 + last_visit;
+
+This is deliberately simple and deterministic.
+
+Important architecture
+
+Don't make frecency part of main.c. I'd have:
+
+src/
+├── main.c
+├── prompt.c
+├── lexer.c
+├── parser.c
+├── hop.c
+└── frecency.c
+
+include/
+├── prompt.h
+├── lexer.h
+├── parser.h
+├── hop.h
+└── frecency.h
+
+That's much easier when you later need hop to interact with the rest of the shell.
+
+
+
+
+
+
+
+B2 reveal is essentially a mini ls implementation, with two custom flags:
+
+-a → include hidden files
+-t → recursively traverse directories
+Implementation structure
+
+I'd make:
+
+src/
+├── reveal.c
+└── ...
+include/
+└── reveal.h
+
+Core flow:
+
+reveal
+  ↓
+parse arguments
+  ↓
+validate flags
+  ↓
+resolve directory (~, ., .., - or path)
+  ↓
+read directory with opendir()
+  ↓
+filter hidden files
+  ↓
+sort alphabetically
+  ↓
+print
+  ↓
+if -t → recursively process subdirectories
+Flags
+
+The weird-looking examples:
+
+reveal -ta
+reveal -aaaa -tttttt
+reveal -ta -tttt
+
+all mean the same thing.
+
+You can simply scan every character after -:
+
+if (arg[0] == '-') {
+    for (int i = 1; arg[i] != '\0'; i++) {
+        if (arg[i] == 'a')
+            show_hidden = 1;
+        else if (arg[i] == 't')
+            recursive = 1;
+        else
+            invalid = 1;
+    }
+}
+
+So repeated a/t don't matter.
+
+Reading directory
+
+Use:
+
+DIR *dir = opendir(path);
+struct dirent *entry;
+
+while ((entry = readdir(dir)) != NULL) {
+    if (!show_hidden && entry->d_name[0] == '.')
+        continue;
+
+    // store entry
+}
+closedir(dir);
+
+You'll need:
+
+#include <dirent.h>
+Sorting
+
+Don't print immediately. First collect the names, then sort them with qsort() using strcmp().
+
+That's important because the requirement says ASCII lexicographic order.
+
+-t
+
+For:
+
+reveal -t
+
+print:
+
+directory/
+directory/file1
+directory/file2
+
+Conceptually:
+
+print_entry(directory);
+
+if (recursive && entry_is_directory)
+    reveal_recursive(child_path);
+
+But don't recurse into . and .., or you'll create an infinite loop.
+
+Path resolution
+
+Unlike hop, there is no frecency fallback.
+
+So:
+
+reveal ~
+reveal .
+reveal ..
+reveal -
+reveal some/path
+
+resolve to a directory, but if resolution fails:
+
+reveal: no such directory
+
+And reveal - before any hop:
+
+reveal: no such directory
+
+as specified.
+
+One important design choice
+
+Don't use the external ls command. Implement it with POSIX directory APIs (opendir, readdir, stat, etc.). That's much more aligned with the assignment's requirement to implement the shell functionality
+
+
+
+
+
+
+Implement B2 as one reveal.c module with these steps:
+
+1. Parse arguments
+int show_hidden = 0;
+int recursive = 0;
+char *path = ".";
+
+for (int i = 1; i < argc; i++) {
+    if (argv[i][0] == '-') {
+        for (int j = 1; argv[i][j]; j++) {
+            if (argv[i][j] == 'a') show_hidden = 1;
+            else if (argv[i][j] == 't') recursive = 1;
+            else {
+                printf("reveal: invalid syntax\n");
+                return;
+            }
+        }
+    } else {
+        if (path != NULL && i != 1) {
+            printf("reveal: invalid syntax\n");
+            return;
+        }
+        path = argv[i];
+    }
+}
+
+Better: track path_given separately so you correctly allow at most one non-flag argument.
+
+2. Resolve the path
+
+Handle:
+
+~   → home_dir
+.   → current directory
+..  → parent
+-   → previous_dir
+name → direct path
+
+If it doesn't exist:
+
+reveal: no such directory
+
+No frecency.
+
+3. Read directory
+DIR *dir = opendir(path);
+
+Then:
+
+struct dirent *entry;
+
+while ((entry = readdir(dir)) != NULL) {
+    if (!show_hidden && entry->d_name[0] == '.')
+        continue;
+
+    // store name
+}
+4. Sort
+
+Store all names in an array and:
+
+qsort(names, count, sizeof(char *), compare_names);
+
+where:
+
+int compare_names(const void *a, const void *b)
+{
+    return strcmp(*(const char **)a, *(const char **)b);
+}
+5. Print
+
+Print sorted entries.
+
+For -t, after printing a directory, recursively call:
+
+reveal_recursive(child_path, show_hidden);
+
+Don't recurse into . or ...
+
+Files
+src/reveal.c
+include/reveal.h
+
+Use:
+
+#include <dirent.h>
+#include <sys/stat.h>
+#include <stdlib.h>
+#include <string.h>
+
+The key idea is:
+
+parse → resolve → opendir() → collect → sort → print → recurse if -t.
+
+
+
+
+
+For B3 peek, structure it as:
+
+peek.c
+├── parse flags
+├── open each input
+├── read lines
+├── -n → number non-empty lines
+├── -r → reverse lines
+└── print
+1. Parse flags
+
+Repeated flags don't matter:
+
+int number = 0;
+int reverse = 0;
+
+for (int i = 1; i < argc; i++) {
+    if (argv[i][0] == '-') {
+        for (int j = 1; argv[i][j]; j++) {
+            if (argv[i][j] == 'n')
+                number = 1;
+            else if (argv[i][j] == 'r')
+                reverse = 1;
+        }
+    }
+}
+
+Then every non-flag argument is a filename.
+
+2. Open each input
+if (strcmp(filename, "-") == 0)
+    fp = stdin;
+else
+    fp = fopen(filename, "r");
+
+Errors:
+
+fopen fails → peek: no such file or directory
+directory → peek: is a directory
+
+Use stat() to distinguish directories.
+
+3. Read lines
+
+For normal input:
+
+char *line = NULL;
+size_t size = 0;
+
+while (getline(&line, &size, fp) != -1) {
+    // process line
+}
+4. -n
+
+Maintain:
+
+int line_number = 0;
+
+Only increment for non-empty lines:
+
+if (line[0] != '\n' && line[0] != '\0') {
+    line_number++;
+    printf("%d %s", line_number, line);
+}
+
+The numbering continues across multiple files.
+
+5. -r
+
+For regular files, the assignment specifically wants lseek() + fixed-size chunks rather than simply loading everything into memory.
+
+So make a separate function:
+
+reverse_file(int fd, int number);
+
+Conceptually:
+
+lseek → move backwards by chunk
+       ↓
+read chunk
+       ↓
+find '\n'
+       ↓
+reconstruct lines backwards
+       ↓
+print
+
+For stdin / pipes, you can use:
+
+getline → store lines → print array backwards
+Recommended files
+src/peek.c
+include/peek.h
+
+The important distinction is:
+
+normal       → stream lines normally
+-n           → number non-empty lines
+-r           → reverse each input independently
+-r + files   → reverse each file, but preserve file order
+stdin / "-"  → use stdin
+
+Don't implement -r by simply reading the entire regular file into memory — the specification explicitly requires lseek() and fixed-size chunks for seekable files.
+
+
+
+
+hoow to exit the txt peek without file
+
+If you're running:
+
+peek
+
+and it is waiting for standard input, press:
+
+Ctrl+D → sends EOF → peek should finish and return to your shell prompt.
+
+If you press Ctrl+C, that interrupts the program instead.
+
+
+
+
+
+
+why is it wciting the shell too
+
+Because peek is reading from stdin. When you run:
+
+peek
+
+your peek process inherits the terminal's standard input, so it waits for you to type data.
+
+If you type:
+
+hello
+world
+
+those lines go to peek, not the shell.
+
+The shell itself is blocked waiting for peek to finish because peek is a foreground process.
+
+So:
+
+shell → starts peek → shell waits
+                  ↓
+              reads stdin
+                  ↓
+              Ctrl+D (EOF)
+                  ↓
+              peek exits
+                  ↓
+              shell continues
+
+That's exactly the expected behavior for B3.
+
+
+
+
+
+
+no, doing ctrl d also making exirt the shell, not only peek
+
+Ah — that means your shell is also treating Ctrl+D as EOF after peek exits.
+
+Most likely your loop is doing something like:
+
+if (fgets(input, sizeof(input), stdin) == NULL)
+    break;
+
+When peek reads from stdin, Ctrl+D sends EOF. If that EOF is still pending when peek exits, your shell's next fgets() also sees EOF → shell exits.
+
+For a proper shell, after the foreground peek finishes, you need to make sure the terminal/input state is handled correctly before the shell reads its next command.
+
+But: if you're currently testing B3 inside your own shell, show me your current main.c / command-execution code. The exact fix depends on how you're launching peek.
+
+
+
+
+
+
+peeking 2 files with r t is making numbers like 3 2 1 6 5 4
+
+Yes — that numbering is wrong for peek -rn file1 file2.
+
+The line numbers should be global across all files, not reset/reversed per file.
+
+Expected:
+
+file1:
+1 line1
+2 line2
+3 line3
+
+file2:
+4 line4
+5 line5
+6 line6
+
+With -r, the output should be:
+
+3 line3
+2 line2
+1 line1
+6 line6
+5 line5
+4 line4
+
+So if you're getting:
+
+3 2 1 6 5 4
+
+that part is actually correct if each file has 3 lines. The important thing is that the file order stays the same, while the lines inside each file are reversed.
+
+
+
+
+
+
+gimme code for error handling parts
+
+For B3 peek, the error handling you need is mainly these two cases:
+
+1. File doesn't exist
+FILE *fp = fopen(filename, "r");
+
+if (fp == NULL) {
+    printf("peek: no such file or directory\n");
+    continue;
+}
+2. File is a directory
+
+Use stat() before opening:
+
+struct stat st;
+
+if (stat(filename, &st) == -1) {
+    printf("peek: no such file or directory\n");
+    continue;
+}
+
+if (S_ISDIR(st.st_mode)) {
+    printf("peek: is a directory\n");
+    continue;
+}
+
+FILE *fp = fopen(filename, "r");
+
+Include:
+
+#include <sys/stat.h>
+3. - means stdin
+
+Don't call stat() on -:
+
+if (strcmp(filename, "-") == 0) {
+    fp = stdin;
+} else {
+    struct stat st;
+
+    if (stat(filename, &st) == -1) {
+        printf("peek: no such file or directory\n");
+        continue;
+    }
+
+    if (S_ISDIR(st.st_mode)) {
+        printf("peek: is a directory\n");
+        continue;
+    }
+
+    fp = fopen(filename, "r");
+
+    if (fp == NULL) {
+        printf("peek: no such file or directory\n");
+        continue;
+    }
+}
+
+And only:
+
+fclose(fp);
+
+when fp != stdin.
+
+
+
+
+
+
+B4: locate [10]
+
+Syntax: locate filename+
+
+Purpose: The locate command returns the pathnames of the files (or links) which would be executed in the current environment, had its arguments been given as commands in a strictly POSIX-conformant shell.
+
+Requirements:
+
+For each filename, first check the current working directory. If a match exists there, print its absolute path first. Then search each directory listed in PATH, in order, and print the absolute path of every match found. This means a name matching in both the cwd and two PATH entries prints three lines, in that order. Do not recursively search within the directories listed in PATH.
+The absolute path to the executable must be printed (even if the executable exists in the current working directory).
+If no arguments are provided, print locate: invalid syntax
+If multiple arguments are provided, print the path for each one of them, in the order specified by the user.
+If multiple matching executable paths are found, print all the paths.
+If filename is not a valid executable, print: locate: command not found (commandname) and continue processing the remaining arguments.
+You may assume that file paths will not be passed as arguments.
+
+Example:
+
+<goatam@iiit:~> locate java
+/usr/bin/java
+<goatam@iiit:~> locate man java python nada
+/usr/bin/man
+/usr/bin/java
+/usr/bin/python
+locate: command not found (nada)
+<goatam@iiit:~> locate sudo
+/usr/bin/sudo
+/bin/sudo
+
+what to ensure
+
+For B4, make sure your implementation handles these cases:
+
+No arguments
+locate
+→ locate: invalid syntax
+Current directory first
+Check ./filename first.
+If executable, print its absolute path.
+Then search $PATH
+Split PATH by :.
+Search each directory in order.
+Print every executable match, not just the first.
+Check executable
+Use:
+access(path, X_OK)
+
+Also ensure it's actually a regular file (or otherwise an executable file appropriate to the assignment).
+
+Absolute paths
+Use realpath() or construct an absolute path so you never print:
+./program
+
+instead print:
+
+/home/user/program
+Not found
+locate: command not found (abc)
+
+Then continue to the next argument.
+
+Multiple arguments
+locate java python gcc
+
+Process java, then python, then gcc, preserving argument order.
+
+Core search logic
+check cwd/filename
+if executable:
+    print absolute path
+
+for each directory in PATH:
+    check directory/filename
+    if executable:
+        print absolute path
+
+if no match:
+    print command not found
+
+Important: don't recursively search PATH directories. Only check the exact directory/filename.
+
+
+
+
+
+
+Implement it with access() + getcwd() + PATH.
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <limits.h>
+
+Core function:
+
+void locate_command(const char *name)
+{
+    char path[PATH_MAX];
+    char abs_path[PATH_MAX];
+    int found = 0;
+
+    /* 1. Check current directory */
+    if (getcwd(path, sizeof(path)) != NULL) {
+        snprintf(abs_path, sizeof(abs_path), "%s/%s", path, name);
+
+        if (access(abs_path, X_OK) == 0) {
+            printf("%s\n", abs_path);
+            found = 1;
+        }
+    }
+
+    /* 2. Search PATH */
+    char *path_env = getenv("PATH");
+
+    if (path_env != NULL) {
+        char *copy = strdup(path_env);
+        char *dir = strtok(copy, ":");
+
+        while (dir != NULL) {
+            snprintf(abs_path, sizeof(abs_path), "%s/%s", dir, name);
+
+            if (access(abs_path, X_OK) == 0) {
+                printf("%s\n", abs_path);
+                found = 1;
+            }
+
+            dir = strtok(NULL, ":");
+        }
+
+        free(copy);
+    }
+
+    /* 3. Nothing found */
+    if (!found)
+        printf("locate: command not found (%s)\n", name);
+}
+
+Then in your locate command:
+
+if (argc < 2) {
+    printf("locate: invalid syntax\n");
+    return;
+}
+
+for (int i = 1; i < argc; i++)
+    locate_command(argv[i]);
+One correction
+
+access(..., X_OK) alone can consider some non-regular executable objects. To be safer, use stat() and check:
+
+S_ISREG(st.st_mode)
+
+before printing.
+
+The overall flow is simply:
+
+locate name
+   ↓
+check ./name
+   ↓
+check every PATH directory
+   ↓
+print ALL executable matches
+   ↓
+if none → command not found
+
+
+
+
+
+
+error handl;iong
+
+For B4 error handling, you only need these two cases:
+
+No arguments
+if (argc < 2) {
+    printf("locate: invalid syntax\n");
+    return;
+}
+Command not found
+
+Your search function should track whether any executable match was found:
+
+int found = 0;
+
+/* cwd check */
+if (access(path, X_OK) == 0) {
+    printf("%s\n", path);
+    found = 1;
+}
+
+/* PATH checks */
+...
+
+if (!found) {
+    printf("locate: command not found (%s)\n", name);
+}
+Also check that it's a regular file
+struct stat st;
+
+if (stat(path, &st) == 0 &&
+    S_ISREG(st.st_mode) &&
+    access(path, X_OK) == 0) {
+    printf("%s\n", path);
+    found = 1;
+}
+
+So:
+
+locate
+→ locate: invalid syntax
+
+locate nada
+→ locate: command not found (nada)
+
+locate java nada python
+→ java paths
+→ locate: command not found (nada)
+→ python paths
+
+Importantly, an error for one argument must not stop processing the remaining arguments.
+
+
+
+
+
+
+is the error message same for all error?
+
+No. ❌ Each command has its own specified error messages.
+
+For the parts we've covered:
+
+A3 invalid syntax: cshell: invalid syntax
+B1 hop: hop: no such directory
+B2 reveal: reveal: invalid syntax / reveal: no such directory
+B3 peek: peek: no such file or directory / peek: is a directory
+B4 locate: locate: invalid syntax / locate: command not found (name)
+
+So don't use one generic error message for everything. Follow the exact message specified for each command.
+
+
+
+
+
+for loacate only
+
+For locate only, there are 2 error messages:
+
+locate
+→ locate: invalid syntax
+locate nonexistent
+→ locate: command not found (nonexistent)
+
+For multiple arguments, if one isn't found, print its error and continue with the remaining arguments.
+
+There are no other locate error messages specified.
+
+
+
+
+when to display whaqyt
+
+For locate:
+
+No filename given → immediately display:
+
+locate: invalid syntax
+
+Filename given but no executable match anywhere → after checking CWD + every PATH directory:
+
+locate: command not found (filename)
+Match found → display the absolute path(s), no error.
+
+Example:
+
+locate java
+→ /usr/bin/java
+
+locate java nada
+→ /usr/bin/java
+→ locate: command not found (nada)
+
+So the command not found message comes only after the complete search for that particular filename fails.
+
+
+
+
+
+
+For Part C, you are implementing actual command execution. It builds directly on your A3 parser/tokenizer.
+
+The expected scope is:
+
+C1 — Command execution
+
+Your shell must:
+
+Run external commands using fork() + exec*()
+Wait for foreground processes
+Support background processes with &
+Handle multiple commands separated by ;
+Preserve the shell's own process
+C2 — Input redirection <
+
+Example:
+
+cat < input.txt
+
+You need:
+
+open input.txt
+dup2(fd, STDIN_FILENO)
+close(fd)
+exec command
+C3 — Output redirection > and >>
+echo hello > out.txt
+echo hello >> out.txt
+> → create/truncate file
+>> → create/append to file
+Use dup2() to replace stdout.
+C4 — Pipes |
+cat file.txt | grep hello | wc -l
+
+You need:
+
+pipe()
+fork()
+dup2()
+connect stdout of one process → stdin of next
+wait for the pipeline appropriately.
+The important connection
+
+Your A3 parser should already produce enough information to represent:
+
+cat < input.txt | grep hi > output.txt &
+
+as something like:
+
+Command 1:
+  argv = ["cat"]
+  stdin = input.txt
+  stdout = pipe
+
+Command 2:
+  argv = ["grep", "hi"]
+  stdin = pipe
+  stdout = output.txt
+  background = true
+
+So don't redesign your parser for C. Make sure your A3 token/command structure stores the operators and filenames properly.
+
+And remember the Part B restriction: exec* is banned only for Part B; C is where command execution using exec* is expected.
+
+what 
+
+
+
+
+
+
+what kind of commits will i see eventually
+
+Eventually, your Git history should look like small, meaningful implementation steps, not one commit per tiny function.
+
+For the C-shell portion, something reasonable would be:
+
+Initial project setup
+Implement shell prompt
+Implement user input
+Implement lexer
+Implement quote and escape handling
+Implement syntax parser
+Implement hop
+Implement hop frecency
+Implement reveal
+Implement peek
+Implement locate
+Implement command execution
+Implement input redirection
+Implement output redirection
+Implement append redirection
+Implement pipes
+Implement background processes
+Fix command parsing for pipelines
+Fix redirection edge cases
+Fix built-in command errors
+Add shell testing
+Fix execution edge cases
+
+Then for the end-submission work, continue committing to the same repository.
+
+You don't need these exact commit messages. The important thing is that the history shows genuine incremental development, rather than:
+
+Initial commit
+...
+Final project
+
+with everything appearing at the last minute.
+
+
+
+
+
+For C1, build a command resolver + executor.
+
+1. Resolve the command
+char *resolve_command(const char *cmd)
+{
+    static char path[PATH_MAX];
+
+    /* %name → PATH directly */
+    if (cmd[0] == '%') {
+        cmd++;
+        return search_path(cmd, path);
+    }
+
+    /* Contains / → literal path */
+    if (strchr(cmd, '/') != NULL) {
+        if (is_executable(cmd))
+            return (char *)cmd;
+        return NULL;
+    }
+
+    /* First current directory */
+    snprintf(path, sizeof(path), "./%s", cmd);
+
+    if (is_executable(path))
+        return path;
+
+    /* Then PATH */
+    return search_path(cmd, path);
+}
+
+Where:
+
+int is_executable(const char *path)
+{
+    struct stat st;
+
+    return stat(path, &st) == 0 &&
+           S_ISREG(st.st_mode) &&
+           access(path, X_OK) == 0;
+}
+2. Search PATH
+
+Reuse the same logic you already implemented for locate:
+
+char *search_path(const char *cmd, char *result)
+{
+    char *env = getenv("PATH");
+    if (!env)
+        return NULL;
+
+    char *copy = strdup(env);
+    char *dir = strtok(copy, ":");
+
+    while (dir) {
+        snprintf(result, PATH_MAX, "%s/%s", dir, cmd);
+
+        if (is_executable(result)) {
+            free(copy);
+            return result;
+        }
+
+        dir = strtok(NULL, ":");
+    }
+
+    free(copy);
+    return NULL;
+}
+3. Execute with fork() + exec*()
+char *path = resolve_command(argv[0]);
+
+if (path == NULL) {
+    printf("cshell: command not found (%s)\n", argv[0]);
+    return;
+}
+
+pid_t pid = fork();
+
+if (pid == 0) {
+    execv(path, argv);
+
+    perror("cshell");
+    exit(1);
+}
+
+waitpid(pid, NULL, 0);
+Result
+build.sh
+
+→ check ./build.sh first.
+
+%build.sh
+
+→ skip ./build.sh, search PATH.
+
+./build.sh
+
+→ execute that exact path.
+
+dosakdaoskdos
+
+→ CWD → PATH → nothing:
+
+cshell: command not found (dosakdaoskdos)
+
+Important: C1 is where you actually introduce fork()/exec*(). Your A3 parser already gives you argv; now you're using it to launch the command.
+
+
+
+
+
+
+
+
+
+mini-project1/
+├── c-shell/
+│   ├── src/
+│   ├── include/
+│   └── Makefile
+├── xv6/
+│   ├── user/
+│   ├── mkfs/
+│   ├── kernel/
+│   ├── Makefile
+│   └── report.md    # Or report.pdf
+├── AI-usage.pdf
+└── README.md
+where does the .giot be
+
+.git goes at the root of mini-project1:
+
+mini-project1/
+├── .git/              ← HERE
+├── .gitignore
+├── c-shell/
+│   ├── src/
+│   ├── include/
+│   └── Makefile
+├── xv6/
+│   ├── user/
+│   ├── mkfs/
+│   ├── kernel/
+│   ├── Makefile
+│   └── report.md
+├── AI-usage.pdf
+└── README.md
+
+You create it with:
+
+cd mini-project1
+git init
+
+Don't manually create .git/ — git init creates and manages it for you.
+
+When you zip mini-project1 for Moodle, include .git/.
+
+
+
+
+
+For C2, the important part is handling multiple < files as one continuous stdin stream.
+
+The cleanest approach is to create a pipe, write all input files into the pipe, then connect the command's stdin to the pipe.
+
+In the child process
+int pipefd[2];
+
+if (pipe(pipefd) == -1) {
+    perror("pipe");
+    exit(1);
+}
+
+pid_t pid = fork();
+
+if (pid == 0) {
+    // Child
+
+    close(pipefd[1]);
+
+    if (dup2(pipefd[0], STDIN_FILENO) == -1) {
+        perror("dup2");
+        exit(1);
+    }
+
+    close(pipefd[0]);
+
+    execv(command_path, argv);
+
+    perror("cshell");
+    exit(1);
+}
+In the parent
+
+Open each < file and write its contents into the pipe in order:
+
+close(pipefd[0]);
+
+for (int i = 0; i < input_file_count; i++) {
+
+    int fd = open(input_files[i], O_RDONLY);
+
+    if (fd == -1) {
+        printf("cshell: no such file or directory\n");
+        close(pipefd[1]);
+        waitpid(pid, NULL, 0);
+        return;
+    }
+
+    char buffer[4096];
+    ssize_t n;
+
+    while ((n = read(fd, buffer, sizeof(buffer))) > 0) {
+        write(pipefd[1], buffer, n);
+    }
+
+    close(fd);
+}
+
+close(pipefd[1]);
+waitpid(pid, NULL, 0);
+
+So:
+
+cat < a.txt < b.txt
+        ↓
+open a.txt → pipe
+open b.txt → pipe
+        ↓
+child stdin ← pipe
+        ↓
+cat sees: contents(a.txt) + contents(b.txt)
+One important issue
+
+Don't create the child before checking all files. Otherwise:
+
+cat < exists.txt < missing.txt
+
+could start cat before discovering the missing file.
+
+Better flow:
+
+1. Open/validate ALL input files
+2. If any fails → print error, execute nothing
+3. Create pipe
+4. Fork
+5. Parent feeds files into pipe
+6. Child dup2(pipe → stdin)
+7. exec
+
+This exactly satisfies the requirement that if any input file cannot be opened, the command must not execute.
+
+
+
+
+
+
+
+One important issue
+
+Don't create the child before checking all files. Otherwise:
+
+cat < exists.txt < missing.txt
+why tho
+
+Because the requirement says:
+
+If any input file does not exist or cannot be opened, the shell must not execute the command.
+
+Consider:
+
+cat < exists.txt < missing.txt
+
+If you fork() and start cat immediately:
+
+cat starts successfully.
+You open exists.txt and feed it.
+Then you discover missing.txt doesn't exist.
+But cat is already running and may have already produced output.
+
+That violates the requirement.
+
+So you should first:
+
+Check/open exists.txt  ✓
+Check/open missing.txt ✗
+        ↓
+print error
+        ↓
+DO NOT fork/execute cat
+
+The key rule is:
+
+Validate ALL redirection files first → only then create the process.
+
+
+
+
+
+C3: Output Redirection [12]
+
+Syntax: command > filename or command >> filename
+
+Purpose: The output redirection operators allow a command’s output to be written to one or more files instead of the terminal.
+
+Requirements
+
+A command may have more than one output redirection (e.g. command > f1 >> f2 > f3). Every listed file must receive the complete output of the command.
+Each redirection keeps its own mode independently: > truncates its file (or creates it with permissions 0644 if it doesn’t exist), >> appends to its file (or creates it with 0644 if it doesn’t exist).
+When output redirection is present, the command’s output must not appear on the terminal, only in the listed files.
+If any listed file cannot be opened for writing, the shell must print cshell: unable to create file for writing and not execute the command.
+Input and output redirection must work together (e.g. command < input.txt > output.txt >> log.txt).
+
+Example
+
+<goatam@iiit:~> echo hi > out1.txt > out2.txt
+<goatam@iiit:~> cat out1.txt
+hi
+<goatam@iiit:~> cat out2.txt
+hi
+<goatam@iiit:~> echo again >> out1.txt > out3.txt
+<goatam@iiit:~> cat out1.txt
+hi
+again
+<goatam@iiit:~> cat out3.txt
+again
+this, what tp keep in mind
+
+For C3, keep these points in mind:
+
+1. Every output file gets the complete output
+echo hi > f1 > f2
+
+Both f1 and f2 must contain:
+
+hi
+
+So you cannot simply dup2() stdout to the last file.
+
+You need to send the command's output to all output files.
+
+2. > vs >>
+>   → O_WRONLY | O_CREAT | O_TRUNC
+>>  → O_WRONLY | O_CREAT | O_APPEND
+
+Both use:
+
+0644
+
+when creating a new file.
+
+3. Validate ALL files first
+
+Same principle as C2.
+
+open f1 ✓
+open f2 ✓
+open f3 ✗
+       ↓
+error
+       ↓
+DO NOT execute command
+
+Error:
+
+cshell: unable to create file for writing
+4. Command output must not reach terminal
+
+If:
+
+echo hi > f1 > f2
+
+hi should only go to the files.
+
+5. Input + output must combine
+cat < input.txt > output.txt >> log.txt
+
+So your executor needs to handle:
+
+input redirections
+        ↓
+   command
+        ↓
+output redirections
+Biggest implementation point
+
+For multiple output files, use a pipe/temporary stream:
+
+command
+   ↓
+pipe
+   ↓
+read output
+ ↙ ↓ ↘
+f1 f2 f3
+
+This ensures every output file gets the same complete command output.
+
+
+
+
+
+
+
+The tricky part of C3 is that:
+
+echo hi > f1 > f2
+
+means both f1 and f2 must get hi.
+
+You cannot do:
+
+dup2(f1, STDOUT_FILENO);
+dup2(f2, STDOUT_FILENO);
+
+because the second dup2() replaces the first. Only f2 would receive the output.
+
+Implement it like this
+
+Use a pipe between the command and the output files:
+
+command
+   ↓
+ pipe
+   ↓
+parent reads output
+   ↓
+ ┌──────┬──────┐
+ f1     f2     f3
+Flow
+
+1. First validate/open ALL output files
+
+For each >:
+
+open(file, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+
+For each >>:
+
+open(file, O_WRONLY | O_CREAT | O_APPEND, 0644);
+
+If any fails:
+
+cshell: unable to create file for writing
+
+and don't execute the command.
+
+2. Create a pipe
+
+pipe(pipefd);
+
+3. Child
+
+Instead of stdout → terminal:
+
+dup2(pipefd[1], STDOUT_FILENO);
+
+Then exec.
+
+4. Parent
+
+Read from:
+
+pipefd[0]
+
+and write every chunk to every output file:
+
+while ((n = read(pipefd[0], buffer, sizeof(buffer))) > 0) {
+    for (int i = 0; i < output_count; i++)
+        write(output_fd[i], buffer, n);
+}
+
+Then close everything.
+
+For your example
+echo again >> out1.txt > out3.txt
+
+you open:
+
+out1.txt → O_APPEND
+out3.txt → O_TRUNC
+
+Then the output from echo is copied to both.
+
+So the key implementation idea is:
+
+command stdout → one pipe → parent duplicates the output into every requested file.
+
+
+
+
+
+
+like what about echo hi > f1.txt > f2.txt how does it work 
+
+For:
+
+echo hi > f1.txt > f2.txt
+
+the assignment specifically says both files receive hi.
+
+Implementation:
+
+echo hi
+   │
+   ▼
+  pipe
+   │
+   ▼
+parent reads "hi\n"
+   │
+   ├──→ f1.txt
+   └──→ f2.txt
+
+Before running echo:
+
+Open f1.txt with O_TRUNC.
+Open f2.txt with O_TRUNC.
+If either fails → error and don't run echo.
+Create the pipe.
+Child: dup2(pipe_write, STDOUT_FILENO) → exec echo.
+Parent: read from pipe and write() the same bytes to both files.
+
+
+
+
+
+For:
+
+echo hi > f1.txt > f2.txt
+Implementation logic
+
+1. Parse redirections
+
+Store:
+
+outputs:
+  f1.txt → >
+  f2.txt → >
+
+2. Validate/open ALL files before executing
+
+fd1 = open("f1.txt", O_WRONLY | O_CREAT | O_TRUNC, 0644);
+fd2 = open("f2.txt", O_WRONLY | O_CREAT | O_TRUNC, 0644);
+
+At this point, both files are already truncated.
+
+If either open() fails → close previously opened files, print:
+
+cshell: unable to create file for writing
+
+and don't execute.
+
+3. Create a pipe
+
+echo hi → pipe → parent
+
+4. Child
+
+dup2(pipe_write, STDOUT_FILENO);
+exec...
+
+So echo writes hi\n into the pipe instead of the terminal.
+
+5. Parent broadcasts the output
+
+while ((n = read(pipe_read, buffer, sizeof(buffer))) > 0) {
+    write(fd1, buffer, n);
+    write(fd2, buffer, n);
+}
+
+6. Close everything
+
+pipe
+f1
+f2
+Final result
+f1.txt → hi
+f2.txt → hi
+
+The key idea: truncate all targets first → run command once → copy its output to every target.
+
+
+
+
+
+
+For C4, think of a pipeline as a chain of processes connected by pipes.
+
+For:
+
+cat < in.txt | sort | uniq > out.txt
+
+the structure is:
+
+cat ──pipe1──> sort ──pipe2──> uniq
+ ↑                         ↓
+in.txt                    out.txt
+Implementation logic
+
+1. Split into commands
+
+cmd[0] = cat < in.txt
+cmd[1] = sort
+cmd[2] = uniq > out.txt
+
+2. Create N-1 pipes
+
+For 3 commands:
+
+pipe(pipe1);
+pipe(pipe2);
+
+3. Fork once per command
+
+for (i = 0; i < command_count; i++)
+    fork();
+
+Each child gets:
+
+cmd[i] stdin from previous pipe
+cmd[i] stdout to next pipe
+
+Conceptually:
+
+command 0:
+stdin  = normal / input redirection
+stdout = pipe1[write]
+
+command 1:
+stdin  = pipe1[read]
+stdout = pipe2[write]
+
+command 2:
+stdin  = pipe2[read]
+stdout = normal / output redirection
+In each child
+
+For command i:
+
+if (i > 0)
+    dup2(pipes[i-1][0], STDIN_FILENO);
+
+if (i < n - 1)
+    dup2(pipes[i][1], STDOUT_FILENO);
+
+Then close all pipe FDs in the child and execute.
+
+Parent
+
+After forking all children:
+
+close(all pipe fds);
+
+for (i = 0; i < n; i++)
+    waitpid(pids[i], NULL, 0);
+
+The parent must close its copies, otherwise commands can remain waiting for EOF.
+
+Failed command
+
+For:
+
+badcmd | sort
+
+badcmd child fails to resolve:
+
+cshell: command not found (badcmd)
+
+but do not abort the pipeline. sort still runs.
+
+Main thing to remember
+N commands → N children
+N commands → N-1 pipes
+
+And redirections take precedence at the relevant command's end:
+
+cat < in.txt | sort > out.txt
+
+in.txt → cat → pipe → sort → out.txt
+
+
+
+
+
+
+what exactly isd the diff btw > and |
+
+The simplest difference:
+
+> = command → file
+echo hello > output.txt
+echo → output.txt
+
+It redirects stdout into a file.
+
+| = command → command
+echo hello | grep hello
+echo → pipe → grep
+
+It sends stdout of one command to stdin of another command.
+
+In short
+Operator	Sends output to	Purpose
+>	File	Save command output
+`	`	Another command
+
+So:
+
+cat file.txt > output.txt
+
+means save the output.
+
+cat file.txt | sort
+
+means send the output to sort.
+
+
+
+
+
+
+
+
+> = command → file
+for the echo > file.txt > file1.txt
+
+For:
+
+echo hi > file.txt > file1.txt
+
+the assignment defines it as:
+
+echo hi
+   ↓
+  output
+  ↙    ↘
+file.txt  file1.txt
+
+So both files receive the complete output:
+
+file.txt  → hi
+file1.txt → hi
+
+And because both operators are >:
+
+file.txt is truncated
+file1.txt is truncated
+
+So > here means command → every specified output file, not just the immediately following file.
+
+
+
+
+
+
+do. is file.txt command here
+
+
+No. file.txt is not a command.
+
+In:
+
+echo hi > file.txt > file1.txt
+echo → command
+hi → argument to echo
+> → redirection operator
+file.txt → output filename
+> → redirection operator
+file1.txt → output filename
+
+So conceptually:
+
+echo hi → file.txt
+        ↘ file1.txt
+
+Both files receive echo's output.
+
+
+
+
+
+gimme the implementation for this
+
+For the parser/executor, treat:
+
+echo hi > file.txt > file1.txt
+
+as one command with two output redirections.
+
+Store them while parsing
+typedef struct {
+    char *filename;
+    int append;   // 0 = >, 1 = >>
+} OutputRedir;
+
+OutputRedir outputs[16];
+int output_count = 0;
+
+When parsing tokens:
+
+if (token == OP_GT || token == OP_GTGT) {
+    // next token must be WORD
+    outputs[output_count].filename = next_token.value;
+    outputs[output_count].append = (token == OP_GTGT);
+    output_count++;
+}
+
+So you get:
+
+outputs[0] = file.txt   >
+outputs[1] = file1.txt  >
+Before executing
+
+Open all files first:
+
+for (int i = 0; i < output_count; i++) {
+    int flags = O_WRONLY | O_CREAT;
+
+    if (outputs[i].append)
+        flags |= O_APPEND;
+    else
+        flags |= O_TRUNC;
+
+    output_fds[i] = open(outputs[i].filename, flags, 0644);
+
+    if (output_fds[i] == -1) {
+        printf("cshell: unable to create file for writing\n");
+
+        // close files already opened
+        for (int j = 0; j < i; j++)
+            close(output_fds[j]);
+
+        return;
+    }
+}
+
+For:
+
+echo hi > file.txt > file1.txt
+
+both are opened with:
+
+O_WRONLY | O_CREAT | O_TRUNC
+
+so both are truncated.
+
+Then execute and broadcast output
+
+Don't do:
+
+dup2(fd1, STDOUT_FILENO);
+dup2(fd2, STDOUT_FILENO);
+
+because only fd2 would receive output.
+
+Instead:
+
+echo
+ ↓
+pipe
+ ↓
+parent
+ ├──→ file.txt
+ └──→ file1.txt
+
+The parent reads the command's output from the pipe and writes each chunk to every output_fd.
+
+That's the key implementation for multiple >/>>.
+
+
+
+
+
+
+
+Ah, you mean the C4 piping implementation.
+
+For:
+
+echo hi | grep hi
+1. Create a pipe
+int fd[2];
+pipe(fd);
+fd[0] = read end
+fd[1] = write end
+2. Fork first command
+pid_t p1 = fork();
+
+if (p1 == 0) {
+    dup2(fd[1], STDOUT_FILENO);
+
+    close(fd[0]);
+    close(fd[1]);
+
+    execvp("echo", argv1);
+    exit(1);
+}
+
+Now:
+
+echo stdout → pipe
+3. Fork second command
+pid_t p2 = fork();
+
+if (p2 == 0) {
+    dup2(fd[0], STDIN_FILENO);
+
+    close(fd[0]);
+    close(fd[1]);
+
+    execvp("grep", argv2);
+    exit(1);
+}
+
+Now:
+
+pipe → grep stdin
+4. Parent closes both ends
+close(fd[0]);
+close(fd[1]);
+5. Wait for both
+waitpid(p1, NULL, 0);
+waitpid(p2, NULL, 0);
+
+Overall:
+
+             pipe
+echo ────────→──────→ grep
+ stdout              stdin
+
+For 3 commands, create 2 pipes:
+
+cmd1 → pipe1 → cmd2 → pipe2 → cmd3
+
+So the general rule is:
+
+N commands = N-1 pipes + N child processes.
+
+
+
+
+
+
+
+
+N commands = N-1 pipes + N child processes.  
+ARE  we keeping any error check forthis
+
+Yes. You should error-check the pipe setup and each process.
+
+At minimum:
+
+if (pipe(fd) == -1) {
+    perror("cshell");
+    return;
+}
+
+Check every fork():
+
+pid_t pid = fork();
+
+if (pid < 0) {
+    perror("cshell");
+    return;
+}
+
+Check dup2():
+
+if (dup2(fd[1], STDOUT_FILENO) == -1)
+    exit(1);
+
+And check command execution:
+
+execvp(...);
+
+/* only reached if exec fails */
+printf("cshell: command not found (%s)\n", command);
+exit(1);
+
+For the assignment specifically, if one command in the pipeline doesn't exist, print the error for that stage but still let the other pipeline commands run.
+
+So:
+
+badcmd | sort
+
+should produce:
+
+cshell: command not found (badcmd)
+
+while sort still executes.
+
+
+
+
+
+link to images in drive : https://drive.google.com/drive/folders/1OxUMs--I4SqqcDjkWkRmh4Q_h2Swspbq?usp=sharing

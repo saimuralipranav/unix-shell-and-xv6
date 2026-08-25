@@ -72,13 +72,19 @@ static int list_directory(const char *dir_path, const char *prefix, bool show_hi
             is_dir = S_ISDIR(st.st_mode);
         }
 
+        struct stat lst;
+        bool is_lnk = false;
+        if (lstat(full_path, &lst) == 0) {
+            is_lnk = S_ISLNK(lst.st_mode);
+        }
+
         if (is_dir) {
             printf("%s%s/\n", prefix, entries[i]);
         } else {
             printf("%s%s\n", prefix, entries[i]);
         }
 
-        if (recursive && is_dir && strcmp(entries[i], ".") != 0 && strcmp(entries[i], "..") != 0) {
+        if (recursive && is_dir && !is_lnk && strcmp(entries[i], ".") != 0 && strcmp(entries[i], "..") != 0) {
             char next_prefix[MAX_PATH * 2];
             snprintf(next_prefix, sizeof(next_prefix), "%s%s/", prefix, entries[i]);
             list_directory(full_path, next_prefix, show_hidden, recursive);
@@ -98,6 +104,10 @@ int builtin_reveal(Command *cmd) {
     for (int i = 1; i < cmd->argc; i++) {
         const char *arg = cmd->args[i];
         if (arg[0] == '-' && strlen(arg) > 1) {
+            if (path_arg != NULL) {
+                fprintf(stderr, "reveal: invalid syntax\n");
+                return 1;
+            }
             for (int j = 1; arg[j] != '\0'; j++) {
                 if (arg[j] == 'a') {
                     show_hidden = true;
