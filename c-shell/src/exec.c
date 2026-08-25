@@ -136,6 +136,39 @@ static void run_input_helper(Command *cmd, int write_fd) {
     }
 }
 
+static void run_output_helper(Command *cmd, int read_fd) {
+    int *fds = malloc(cmd->out_redir_count * sizeof(int));
+    if (fds == NULL) {
+        perror("malloc");
+        return;
+    }
+    for (int i = 0; i < cmd->out_redir_count; i++) {
+        int flags = O_WRONLY | O_CREAT | (cmd->out_redirs[i].append ? O_APPEND : O_TRUNC);
+        fds[i] = open(cmd->out_redirs[i].filepath, flags, 0644);
+    }
+
+    char buf[4096];
+    ssize_t r;
+    while ((r = read(read_fd, buf, sizeof(buf))) > 0) {
+        for (int i = 0; i < cmd->out_redir_count; i++) {
+            if (fds[i] >= 0) {
+                ssize_t written = 0;
+                while (written < r) {
+                    ssize_t w = write(fds[i], buf + written, r - written);
+                    if (w < 0) break;
+                    written += w;
+                }
+            }
+        }
+    }
+    for (int i = 0; i < cmd->out_redir_count; i++) {
+        if (fds[i] >= 0) {
+            close(fds[i]);
+        }
+    }
+    free(fds);
+}
+
 int execute_pipeline(Pipeline *pipeline) {
     if (pipeline == NULL || pipeline->cmd_count == 0) return 0;
     
@@ -172,12 +205,26 @@ int execute_pipeline(Pipeline *pipeline) {
                 }
             }
             
-            if (cmd->out_redir_count > 0) {
+            if (cmd->out_redir_count == 1) {
                 int flags = O_WRONLY | O_CREAT | (cmd->out_redirs[0].append ? O_APPEND : O_TRUNC);
                 int fd = open(cmd->out_redirs[0].filepath, flags, 0644);
                 if (fd >= 0) {
                     dup2(fd, STDOUT_FILENO);
                     close(fd);
+                }
+            } else if (cmd->out_redir_count > 1) {
+                int out_p[2];
+                if (pipe(out_p) == 0) {
+                    pid_t helper = fork();
+                    if (helper == 0) {
+                        close(out_p[1]);
+                        run_output_helper(cmd, out_p[0]);
+                        close(out_p[0]);
+                        exit(0);
+                    }
+                    close(out_p[0]);
+                    dup2(out_p[1], STDOUT_FILENO);
+                    close(out_p[1]);
                 }
             }
             
@@ -215,12 +262,26 @@ int execute_pipeline(Pipeline *pipeline) {
                 }
             }
             
-            if (cmd->out_redir_count > 0) {
+            if (cmd->out_redir_count == 1) {
                 int flags = O_WRONLY | O_CREAT | (cmd->out_redirs[0].append ? O_APPEND : O_TRUNC);
                 int fd = open(cmd->out_redirs[0].filepath, flags, 0644);
                 if (fd >= 0) {
                     dup2(fd, STDOUT_FILENO);
                     close(fd);
+                }
+            } else if (cmd->out_redir_count > 1) {
+                int out_p[2];
+                if (pipe(out_p) == 0) {
+                    pid_t helper = fork();
+                    if (helper == 0) {
+                        close(out_p[1]);
+                        run_output_helper(cmd, out_p[0]);
+                        close(out_p[0]);
+                        exit(0);
+                    }
+                    close(out_p[0]);
+                    dup2(out_p[1], STDOUT_FILENO);
+                    close(out_p[1]);
                 }
             }
             
