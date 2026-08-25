@@ -23,14 +23,12 @@ static bool is_executable(const char *path) {
 static bool resolve_command(const char *cmd_name, char *out_path, size_t max_len) {
     if (cmd_name == NULL || strlen(cmd_name) == 0) return false;
     
-    // 1. Resolve path with '/' directly
     if (strchr(cmd_name, '/') != NULL) {
         strncpy(out_path, cmd_name, max_len - 1);
         out_path[max_len - 1] = '\0';
         return is_executable(out_path);
     }
     
-    // 2. '%' prefix bypasses CWD, searches PATH directly
     if (cmd_name[0] == '%') {
         const char *real_name = cmd_name + 1;
         const char *path_env = getenv("PATH");
@@ -59,7 +57,6 @@ static bool resolve_command(const char *cmd_name, char *out_path, size_t max_len
         return false;
     }
     
-    // 3. Resolve name without '/' in CWD first
     char cwd_path[MAX_PATH];
     snprintf(cwd_path, sizeof(cwd_path), "./%s", cmd_name);
     if (is_executable(cwd_path)) {
@@ -68,7 +65,6 @@ static bool resolve_command(const char *cmd_name, char *out_path, size_t max_len
         return true;
     }
     
-    // 4. Search PATH directories in order
     const char *path_env = getenv("PATH");
     if (path_env != NULL) {
         char *path_copy = strdup(path_env);
@@ -100,7 +96,7 @@ static bool verify_input_files(Command *cmd) {
     for (int i = 0; i < cmd->in_redir_count; i++) {
         int fd = open(cmd->in_redirs[i].filepath, O_RDONLY);
         if (fd < 0) {
-            fprintf(stderr, "cshell: no such file or directory\\n");
+            fprintf(stderr, "cshell: no such file or directory\n");
             return false;
         }
         close(fd);
@@ -113,12 +109,31 @@ static bool verify_output_files(Command *cmd) {
         int flags = O_WRONLY | O_CREAT | (cmd->out_redirs[i].append ? O_APPEND : O_TRUNC);
         int fd = open(cmd->out_redirs[i].filepath, flags, 0644);
         if (fd < 0) {
-            fprintf(stderr, "cshell: unable to create file for writing\\n");
+            fprintf(stderr, "cshell: unable to create file for writing\n");
             return false;
         }
         close(fd);
     }
     return true;
+}
+
+static void run_input_helper(Command *cmd, int write_fd) {
+    for (int i = 0; i < cmd->in_redir_count; i++) {
+        int fd = open(cmd->in_redirs[i].filepath, O_RDONLY);
+        if (fd >= 0) {
+            char buf[4096];
+            ssize_t r;
+            while ((r = read(fd, buf, sizeof(buf))) > 0) {
+                ssize_t written = 0;
+                while (written < r) {
+                    ssize_t w = write(write_fd, buf + written, r - written);
+                    if (w < 0) break;
+                    written += w;
+                }
+            }
+            close(fd);
+        }
+    }
 }
 
 int execute_pipeline(Pipeline *pipeline) {
@@ -127,26 +142,36 @@ int execute_pipeline(Pipeline *pipeline) {
     if (pipeline->cmd_count == 1) {
         Command *cmd = &pipeline->cmds[0];
         
-        // 1. Verify redirections in parent shell process before executing
         if (!verify_input_files(cmd) || !verify_output_files(cmd)) {
             return 1;
         }
         
-        // 2. Builtin command execution
         if (is_builtin(cmd->args[0])) {
             int saved_in = dup(STDIN_FILENO);
             int saved_out = dup(STDOUT_FILENO);
             
-            // Redirect stdin for builtin
-            if (cmd->in_redir_count > 0) {
+            if (cmd->in_redir_count == 1) {
                 int fd = open(cmd->in_redirs[0].filepath, O_RDONLY);
                 if (fd >= 0) {
                     dup2(fd, STDIN_FILENO);
                     close(fd);
                 }
+            } else if (cmd->in_redir_count > 1) {
+                int in_p[2];
+                if (pipe(in_p) == 0) {
+                    pid_t helper = fork();
+                    if (helper == 0) {
+                        close(in_p[0]);
+                        run_input_helper(cmd, in_p[1]);
+                        close(in_p[1]);
+                        exit(0);
+                    }
+                    close(in_p[1]);
+                    dup2(in_p[0], STDIN_FILENO);
+                    close(in_p[0]);
+                }
             }
             
-            // Redirect stdout for builtin
             if (cmd->out_redir_count > 0) {
                 int flags = O_WRONLY | O_CREAT | (cmd->out_redirs[0].append ? O_APPEND : O_TRUNC);
                 int fd = open(cmd->out_redirs[0].filepath, flags, 0644);
@@ -158,7 +183,6 @@ int execute_pipeline(Pipeline *pipeline) {
             
             int status = exec_builtin(cmd);
             
-            // Restore stdout/stdin
             dup2(saved_in, STDIN_FILENO);
             close(saved_in);
             dup2(saved_out, STDOUT_FILENO);
@@ -167,19 +191,30 @@ int execute_pipeline(Pipeline *pipeline) {
             return status;
         }
         
-        // 3. Regular process execution
         pid_t pid = fork();
         if (pid == 0) {
-            // Child process: Redirect stdin
-            if (cmd->in_redir_count > 0) {
+            if (cmd->in_redir_count == 1) {
                 int fd = open(cmd->in_redirs[0].filepath, O_RDONLY);
                 if (fd >= 0) {
                     dup2(fd, STDIN_FILENO);
                     close(fd);
                 }
+            } else if (cmd->in_redir_count > 1) {
+                int in_p[2];
+                if (pipe(in_p) == 0) {
+                    pid_t helper = fork();
+                    if (helper == 0) {
+                        close(in_p[0]);
+                        run_input_helper(cmd, in_p[1]);
+                        close(in_p[1]);
+                        exit(0);
+                    }
+                    close(in_p[1]);
+                    dup2(in_p[0], STDIN_FILENO);
+                    close(in_p[0]);
+                }
             }
             
-            // Child process: Redirect stdout
             if (cmd->out_redir_count > 0) {
                 int flags = O_WRONLY | O_CREAT | (cmd->out_redirs[0].append ? O_APPEND : O_TRUNC);
                 int fd = open(cmd->out_redirs[0].filepath, flags, 0644);
@@ -198,11 +233,10 @@ int execute_pipeline(Pipeline *pipeline) {
                 perror("execv");
                 exit(EXIT_FAILURE);
             } else {
-                fprintf(stderr, "cshell: command not found (%s)\\n", cmd->args[0]);
+                fprintf(stderr, "cshell: command not found (%s)\n", cmd->args[0]);
                 exit(127);
             }
         } else if (pid > 0) {
-            // Parent process
             int status;
             waitpid(pid, &status, 0);
             if (WIFEXITED(status)) {
@@ -215,6 +249,6 @@ int execute_pipeline(Pipeline *pipeline) {
         }
     }
     
-    printf("Pipelines not implemented in this commit.\\n");
+    printf("Pipelines not implemented in this commit.\n");
     return 1;
 }
