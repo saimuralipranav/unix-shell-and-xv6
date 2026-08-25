@@ -49,6 +49,7 @@ int main(void) {
             }
             free_tokens(tokens, count);
         }
+        clearerr(stdin);
     }
 
     return 0;
