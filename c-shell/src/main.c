@@ -1,7 +1,7 @@
 #include "shell.h"
 #include "lexer.h"
 #include "parser.h"
-#include "builtins.h"
+#include "exec.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,10 +40,8 @@ int main(void) {
 
             Pipeline pipeline;
             if (parse_pipeline(tokens, count, &pipeline)) {
-                if (pipeline.cmd_count == 1 && is_builtin(pipeline.cmds[0].args[0])) {
-                    exec_builtin(&pipeline.cmds[0]);
-                } else if (pipeline.cmd_count > 0) {
-                    printf("Parsed %d command(s) (execution not implemented yet)\n", pipeline.cmd_count);
+                if (pipeline.cmd_count > 0) {
+                    execute_pipeline(&pipeline);
                 }
                 free_pipeline(&pipeline);
             }
