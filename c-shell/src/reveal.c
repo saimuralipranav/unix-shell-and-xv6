@@ -38,6 +38,9 @@ static int list_directory(const char *dir_path, const char *prefix, bool show_hi
 
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL) {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+            continue;
+        }
         if (!show_hidden && entry->d_name[0] == '.') {
             continue;
         }
