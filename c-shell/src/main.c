@@ -1,5 +1,6 @@
 #include "shell.h"
 #include "lexer.h"
+#include "parser.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -32,11 +33,17 @@ int main(void) {
             int count = 0;
             Token *tokens = lex_line(input, &count);
             if (tokens == NULL) {
-                // Lexical error has been printed in lex_line
+                // Lexical error has been printed
                 continue;
             }
 
-            printf("Lexed %d tokens\n", count);
+            Pipeline pipeline;
+            if (parse_pipeline(tokens, count, &pipeline)) {
+                if (pipeline.cmd_count > 0) {
+                    printf("Parsed %d command(s)\n", pipeline.cmd_count);
+                }
+                free_pipeline(&pipeline);
+            }
             free_tokens(tokens, count);
         }
     }
