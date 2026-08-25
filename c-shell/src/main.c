@@ -1,4 +1,5 @@
 #include "shell.h"
+#include "lexer.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,10 +11,10 @@ int main(void) {
     char input[MAX_INPUT + 1];
 
     while (true) {
-        // 1. Display the prompt
+        // Display the prompt
         print_prompt();
 
-        // 2. Read user input
+        // Read user input
         if (fgets(input, sizeof(input), stdin) == NULL) {
             // EOF (Ctrl+D) encountered, print a newline and exit cleanly
             printf("\n");
@@ -28,7 +29,15 @@ int main(void) {
         }
 
         if (input_len > 0) {
-            printf("Command entered: %s\n", input);
+            int count = 0;
+            Token *tokens = lex_line(input, &count);
+            if (tokens == NULL) {
+                // Lexical error has been printed in lex_line
+                continue;
+            }
+
+            printf("Lexed %d tokens\n", count);
+            free_tokens(tokens, count);
         }
     }
 
