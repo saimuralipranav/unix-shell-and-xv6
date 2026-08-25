@@ -364,6 +364,53 @@ int execute_pipeline(Pipeline *pipeline) {
 
 
 
+            // Override input redirection if command has specific redirects
+            if (cmd->in_redir_count == 1) {
+                int fd = open(cmd->in_redirs[0].filepath, O_RDONLY);
+                if (fd >= 0) {
+                    dup2(fd, STDIN_FILENO);
+                    close(fd);
+                }
+            } else if (cmd->in_redir_count > 1) {
+                int in_p[2];
+                if (pipe(in_p) == 0) {
+                    pid_t helper_pid = fork();
+                    if (helper_pid == 0) {
+                        close(in_p[0]);
+                        run_input_helper(cmd, in_p[1]);
+                        close(in_p[1]);
+                        exit(0);
+                    }
+                    close(in_p[1]);
+                    dup2(in_p[0], STDIN_FILENO);
+                    close(in_p[0]);
+                }
+            }
+
+            // Override output redirection if command has specific redirects
+            if (cmd->out_redir_count == 1) {
+                int flags = O_WRONLY | O_CREAT | (cmd->out_redirs[0].append ? O_APPEND : O_TRUNC);
+                int fd = open(cmd->out_redirs[0].filepath, flags, 0644);
+                if (fd >= 0) {
+                    dup2(fd, STDOUT_FILENO);
+                    close(fd);
+                }
+            } else if (cmd->out_redir_count > 1) {
+                int out_p[2];
+                if (pipe(out_p) == 0) {
+                    pid_t helper_pid = fork();
+                    if (helper_pid == 0) {
+                        close(out_p[1]);
+                        run_output_helper(cmd, out_p[0]);
+                        close(out_p[0]);
+                        exit(0);
+                    }
+                    close(out_p[0]);
+                    dup2(out_p[1], STDOUT_FILENO);
+                    close(out_p[1]);
+                }
+            }
+
             // Execute the command
             if (is_builtin(cmd->args[0])) {
                 int status = exec_builtin(cmd);

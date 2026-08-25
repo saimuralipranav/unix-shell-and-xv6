@@ -60,6 +60,7 @@ hop -
 hop /tmp
 hop $TESTDIR
 hop does_not_exist
+peek -
 
 peek $TESTDIR/file1.txt
 peek -n $TESTDIR/file1.txt
@@ -71,7 +72,6 @@ peek -n $TESTDIR/file1.txt $TESTDIR/file2.txt
 peek -r $TESTDIR/file1.txt $TESTDIR/file2.txt
 peek does_not_exist
 peek $TESTDIR
-peek -
 
 locate ls
 locate ls cat
@@ -90,6 +90,7 @@ hop ~ .. -
 hop $TESTDIR subdir
 hop subdir
 hop does_not_exist
+peek -
 
 EOF
 
