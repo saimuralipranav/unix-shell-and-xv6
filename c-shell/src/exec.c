@@ -310,6 +310,117 @@ int execute_pipeline(Pipeline *pipeline) {
         }
     }
     
-    printf("Pipelines not implemented in this commit.\n");
-    return 1;
+    int cmd_count = pipeline->cmd_count;
+
+    // Verify all redirections for all commands first
+    for (int i = 0; i < cmd_count; i++) {
+        if (!verify_input_files(&pipeline->cmds[i]) || !verify_output_files(&pipeline->cmds[i])) {
+            return 1;
+        }
+    }
+
+    // Allocate pipes
+    int (*pipes)[2] = malloc((cmd_count - 1) * sizeof(*pipes));
+    if (pipes == NULL) {
+        perror("malloc");
+        return 1;
+    }
+    for (int i = 0; i < cmd_count - 1; i++) {
+        if (pipe(pipes[i]) < 0) {
+            perror("pipe");
+            free(pipes);
+            return 1;
+        }
+    }
+
+    // Spawn child processes
+    pid_t *pids = malloc(cmd_count * sizeof(pid_t));
+    if (pids == NULL) {
+        perror("malloc");
+        free(pipes);
+        return 1;
+    }
+
+    for (int i = 0; i < cmd_count; i++) {
+        Command *cmd = &pipeline->cmds[i];
+        pids[i] = fork();
+
+        if (pids[i] == 0) {
+            // Child process
+            // Set up pipeline input redirection
+            if (i > 0) {
+                dup2(pipes[i - 1][0], STDIN_FILENO);
+            }
+            // Set up pipeline output redirection
+            if (i < cmd_count - 1) {
+                dup2(pipes[i][1], STDOUT_FILENO);
+            }
+
+            // Close all pipeline pipe descriptors in the child
+            for (int p = 0; p < cmd_count - 1; p++) {
+                close(pipes[p][0]);
+                close(pipes[p][1]);
+            }
+
+
+
+            // Execute the command
+            if (is_builtin(cmd->args[0])) {
+                int status = exec_builtin(cmd);
+                exit(status);
+            } else {
+                char resolved_path[MAX_PATH];
+                if (resolve_command(cmd->args[0], resolved_path, sizeof(resolved_path))) {
+                    char *original_argv0 = cmd->args[0];
+                    if (cmd->args[0][0] == '%') {
+                        cmd->args[0] = cmd->args[0] + 1;
+                    }
+                    execv(resolved_path, cmd->args);
+                    perror("execv");
+                    cmd->args[0] = original_argv0; // Keep state clean if execution failed
+                    exit(1);
+                } else {
+                    fprintf(stderr, "cshell: command not found (%s)\n", cmd->args[0]);
+                    exit(127);
+                }
+            }
+        } else if (pids[i] < 0) {
+            perror("fork");
+            for (int p = 0; p < cmd_count - 1; p++) {
+                close(pipes[p][0]);
+                close(pipes[p][1]);
+            }
+            free(pipes);
+            free(pids);
+            return 1;
+        }
+    }
+
+    // Parent process cleanup and wait
+    for (int p = 0; p < cmd_count - 1; p++) {
+        close(pipes[p][0]);
+        close(pipes[p][1]);
+    }
+
+    int last_status = 0;
+    for (int i = 0; i < cmd_count; i++) {
+        int status;
+        if (waitpid(pids[i], &status, 0) == pids[i]) {
+            if (i == cmd_count - 1) {
+                if (WIFEXITED(status)) {
+                    last_status = WEXITSTATUS(status);
+                } else if (WIFSIGNALED(status)) {
+                    last_status = 128 + WTERMSIG(status);
+                }
+            }
+        }
+    }
+
+    // Reap all helper/tee processes
+    while (wait(NULL) > 0);
+
+    free(pipes);
+    free(pids);
+
+    return last_status;
 }
