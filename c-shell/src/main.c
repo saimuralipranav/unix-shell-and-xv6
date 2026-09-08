@@ -5,10 +5,27 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
+#include <errno.h>
+
+void sigchld_handler(int sig) {
+    (void)sig;
+    check_background_jobs();
+}
 
 int main(int argc, char *argv[]) {
     // Initialize shell global state (home directory, username, hostname)
     init_shell_state();
+    
+    // Set up SIGCHLD handler
+    struct sigaction sa;
+    sa.sa_handler = sigchld_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = SA_RESTART;
+    if (sigaction(SIGCHLD, &sa, NULL) == -1) {
+        perror("sigaction");
+        exit(1);
+    }
 
     char input[MAX_INPUT + 1];
 
@@ -18,6 +35,11 @@ int main(int argc, char *argv[]) {
 
         // 2. Read user input
         if (fgets(input, sizeof(input), stdin) == NULL) {
+            if (errno == EINTR) {
+                clearerr(stdin);
+                printf("\n");
+                continue;
+            }
             // EOF (Ctrl+D) encountered, print a newline and exit cleanly
             printf("\n");
             break;
@@ -29,7 +51,7 @@ int main(int argc, char *argv[]) {
             input[input_len - 1] = '\0';
             input_len--;
         }
-
+        
         if (input_len == 0) continue;
 
         // 3. Lexical analysis

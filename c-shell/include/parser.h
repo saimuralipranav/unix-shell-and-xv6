@@ -25,6 +25,7 @@ typedef struct {
 typedef struct {
     Command *cmds;
     int cmd_count;
+    bool is_background; // True if this pipeline is followed by '&'
 } Pipeline;
 
 typedef struct {

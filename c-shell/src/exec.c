@@ -10,6 +10,9 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 
+// ---------------------------------------------------------
+// Helper: Check if file is executable
+// ---------------------------------------------------------
 static bool is_executable(const char *path) {
     struct stat st;
     if (stat(path, &st) == 0) {
@@ -20,15 +23,20 @@ static bool is_executable(const char *path) {
     return false;
 }
 
+// ---------------------------------------------------------
+// Resolve command path according to C1 requirements
+// ---------------------------------------------------------
 static bool resolve_command(const char *cmd_name, char *out_path, size_t max_len) {
     if (cmd_name == NULL || strlen(cmd_name) == 0) return false;
-    
+
+    // Rule 1: contains a '/' -> treat as literal path
     if (strchr(cmd_name, '/') != NULL) {
         strncpy(out_path, cmd_name, max_len - 1);
         out_path[max_len - 1] = '\0';
         return is_executable(out_path);
     }
-    
+
+    // Rule 3: starts with '%' -> skip CWD, search PATH
     if (cmd_name[0] == '%') {
         const char *real_name = cmd_name + 1;
         const char *path_env = getenv("PATH");
@@ -56,7 +64,8 @@ static bool resolve_command(const char *cmd_name, char *out_path, size_t max_len
         }
         return false;
     }
-    
+
+    // Rule 2: check CWD first, then search PATH
     char cwd_path[MAX_PATH];
     snprintf(cwd_path, sizeof(cwd_path), "./%s", cmd_name);
     if (is_executable(cwd_path)) {
@@ -64,7 +73,8 @@ static bool resolve_command(const char *cmd_name, char *out_path, size_t max_len
         out_path[max_len - 1] = '\0';
         return true;
     }
-    
+
+    // Search PATH
     const char *path_env = getenv("PATH");
     if (path_env != NULL) {
         char *path_copy = strdup(path_env);
@@ -88,10 +98,13 @@ static bool resolve_command(const char *cmd_name, char *out_path, size_t max_len
             free(path_copy);
         }
     }
-    
+
     return false;
 }
 
+// ---------------------------------------------------------
+// Redirection Verification
+// ---------------------------------------------------------
 static bool verify_input_files(Command *cmd) {
     for (int i = 0; i < cmd->in_redir_count; i++) {
         int fd = open(cmd->in_redirs[i].filepath, O_RDONLY);
@@ -117,6 +130,9 @@ static bool verify_output_files(Command *cmd) {
     return true;
 }
 
+// ---------------------------------------------------------
+// Helper Process Functions for Multi-Redirection
+// ---------------------------------------------------------
 static void run_input_helper(Command *cmd, int write_fd) {
     for (int i = 0; i < cmd->in_redir_count; i++) {
         int fd = open(cmd->in_redirs[i].filepath, O_RDONLY);
@@ -161,6 +177,7 @@ static void run_output_helper(Command *cmd, int read_fd) {
             }
         }
     }
+
     for (int i = 0; i < cmd->out_redir_count; i++) {
         if (fds[i] >= 0) {
             close(fds[i]);
@@ -169,6 +186,55 @@ static void run_output_helper(Command *cmd, int read_fd) {
     free(fds);
 }
 
+// ---------------------------------------------------------
+// Job Control
+// ---------------------------------------------------------
+typedef struct {
+    int job_number;
+    pid_t pid;
+    char command_name[256];
+    bool active;
+} BackgroundJob;
+
+#define MAX_BG_JOBS 1024
+static BackgroundJob bg_jobs[MAX_BG_JOBS];
+static int next_job_number = 1;
+
+void register_background_job(pid_t pid, const char *cmd_name) {
+    for (int i = 0; i < MAX_BG_JOBS; i++) {
+        if (!bg_jobs[i].active) {
+            bg_jobs[i].job_number = next_job_number++;
+            bg_jobs[i].pid = pid;
+            strncpy(bg_jobs[i].command_name, cmd_name, sizeof(bg_jobs[i].command_name) - 1);
+            bg_jobs[i].command_name[255] = '\0';
+            bg_jobs[i].active = true;
+            printf("[%d] %d\n", bg_jobs[i].job_number, pid);
+            return;
+        }
+    }
+}
+
+void check_background_jobs(void) {
+    int status;
+    pid_t pid;
+    while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
+        for (int i = 0; i < MAX_BG_JOBS; i++) {
+            if (bg_jobs[i].active && bg_jobs[i].pid == pid) {
+                if (WIFEXITED(status)) {
+                    printf("%s with pid %d exited normally\n", bg_jobs[i].command_name, pid);
+                } else if (WIFSIGNALED(status)) {
+                    printf("%s with pid %d exited abnormally\n", bg_jobs[i].command_name, pid);
+                }
+                bg_jobs[i].active = false;
+                break;
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------
+// Pipeline Execution
+// ---------------------------------------------------------
 int execute_pipeline(Pipeline *pipeline, bool *failed_to_start) {
     if (pipeline == NULL || pipeline->cmd_count == 0) return 0;
     if (failed_to_start) *failed_to_start = false;
@@ -192,7 +258,7 @@ int execute_pipeline(Pipeline *pipeline, bool *failed_to_start) {
             return -2;
         }
 
-        if (is_b) {
+        if (is_b && !pipeline->is_background) {
             int saved_in = dup(STDIN_FILENO);
             int saved_out = dup(STDOUT_FILENO);
 
@@ -307,6 +373,13 @@ int execute_pipeline(Pipeline *pipeline, bool *failed_to_start) {
 
     for (int p = 0; p < cmd_count - 1; p++) {
         close(pipes[p][0]); close(pipes[p][1]);
+    }
+
+    if (pipeline->is_background) {
+        register_background_job(pids[0], pipeline->cmds[0].args[0]);
+        if (pipes) free(pipes);
+        free(pids);
+        return 0; // Return immediately for background jobs
     }
 
     int last_status = 0;

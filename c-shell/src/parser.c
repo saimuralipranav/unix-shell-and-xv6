@@ -211,14 +211,11 @@ bool parse_sequence(const Token *tokens, int count, Sequence *out_seq) {
         return true;
     }
 
-    // 3. Count pipelines (separated by ;) up to &
+    // 3. Count pipelines (separated by ; or &)
     int pipeline_count = 1;
     for (int i = 0; i < count; i++) {
-        if (tokens[i].type == TOKEN_AMP) {
-            break; // D2 not implemented here
-        }
-        if (tokens[i].type == TOKEN_SEMI) {
-            if (i + 1 < count && tokens[i+1].type != TOKEN_EOF && tokens[i+1].type != TOKEN_AMP) {
+        if (tokens[i].type == TOKEN_SEMI || tokens[i].type == TOKEN_AMP) {
+            if (i + 1 < count && tokens[i+1].type != TOKEN_EOF) {
                 pipeline_count++;
             }
         }
@@ -248,6 +245,7 @@ bool parse_sequence(const Token *tokens, int count, Sequence *out_seq) {
     
     out_seq->pipelines[0].cmds = malloc(cmd_count * sizeof(Command));
     out_seq->pipelines[0].cmd_count = cmd_count;
+    out_seq->pipelines[0].is_background = false;
     for (int i = 0; i < cmd_count; i++) {
         init_command(&out_seq->pipelines[0].cmds[i]);
     }
@@ -257,12 +255,14 @@ bool parse_sequence(const Token *tokens, int count, Sequence *out_seq) {
     for (int i = 0; i < count; i++) {
         TokenType t_type = tokens[i].type;
 
-        if (t_type == TOKEN_EOF || t_type == TOKEN_AMP) {
+        if (t_type == TOKEN_EOF) {
             break;
         }
         
-        if (t_type == TOKEN_SEMI) {
-            if (i + 1 < count && tokens[i+1].type != TOKEN_EOF && tokens[i+1].type != TOKEN_AMP) {
+        if (t_type == TOKEN_SEMI || t_type == TOKEN_AMP) {
+            out_seq->pipelines[cur_pipe_idx].is_background = (t_type == TOKEN_AMP);
+            
+            if (i + 1 < count && tokens[i+1].type != TOKEN_EOF) {
                 cur_pipe_idx++;
                 cur_cmd_idx = 0;
                 last_op = TOKEN_EOF;
@@ -280,6 +280,7 @@ bool parse_sequence(const Token *tokens, int count, Sequence *out_seq) {
                 
                 out_seq->pipelines[cur_pipe_idx].cmds = malloc(cmd_count * sizeof(Command));
                 out_seq->pipelines[cur_pipe_idx].cmd_count = cmd_count;
+                out_seq->pipelines[cur_pipe_idx].is_background = false;
                 for (int j = 0; j < cmd_count; j++) {
                     init_command(&out_seq->pipelines[cur_pipe_idx].cmds[j]);
                 }
