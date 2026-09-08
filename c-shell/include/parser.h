@@ -27,12 +27,17 @@ typedef struct {
     int cmd_count;
 } Pipeline;
 
-// Frees the parsed pipeline
-void free_pipeline(Pipeline *pipeline);
+typedef struct {
+    Pipeline *pipelines;
+    int pipeline_count;
+} Sequence;
+
+// Frees the parsed sequence
+void free_sequence(Sequence *seq);
 
 // Parses the token sequence and validates the grammar.
-// If valid, populates the Pipeline struct for the FIRST command group (up to the first ; or &).
+// If valid, populates the Sequence struct containing multiple Pipelines.
 // If invalid, prints "cshell: invalid syntax", frees memory, and returns false.
-bool parse_pipeline(const Token *tokens, int count, Pipeline *out_pipeline);
+bool parse_sequence(const Token *tokens, int count, Sequence *out_seq);
 
 #endif // PARSER_H

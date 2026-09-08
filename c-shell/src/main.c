@@ -6,17 +6,17 @@
 #include <stdlib.h>
 #include <string.h>
 
-int main(void) {
+int main(int argc, char *argv[]) {
     // Initialize shell global state (home directory, username, hostname)
     init_shell_state();
 
     char input[MAX_INPUT + 1];
 
     while (true) {
-        // Display the prompt
+        // 1. Display the prompt
         print_prompt();
 
-        // Read user input
+        // 2. Read user input
         if (fgets(input, sizeof(input), stdin) == NULL) {
             // EOF (Ctrl+D) encountered, print a newline and exit cleanly
             printf("\n");
@@ -30,24 +30,28 @@ int main(void) {
             input_len--;
         }
 
-        if (input_len > 0) {
-            int count = 0;
-            Token *tokens = lex_line(input, &count);
-            if (tokens == NULL) {
-                // Lexical error printed in lex_line
-                continue;
-            }
+        if (input_len == 0) continue;
 
-            Pipeline pipeline;
-            if (parse_pipeline(tokens, count, &pipeline)) {
-                if (pipeline.cmd_count > 0) {
-                    execute_pipeline(&pipeline);
-                }
-                free_pipeline(&pipeline);
-            }
-            free_tokens(tokens, count);
+        // 3. Lexical analysis
+        int token_count = 0;
+        Token *tokens = lex_line(input, &token_count);
+        if (tokens == NULL) {
+            // Lexical error occurred (already printed "cshell: invalid syntax")
+            continue;
         }
-        clearerr(stdin);
+
+        // 4. Grammar parsing and sequence construction
+        Sequence seq;
+        if (parse_sequence(tokens, token_count, &seq)) {
+            // 5. Execution
+            if (seq.pipeline_count > 0) {
+                execute_sequence(&seq);
+            }
+            free_sequence(&seq);
+        }
+
+        // 6. Free tokens
+        free_tokens(tokens, token_count);
     }
 
     return 0;

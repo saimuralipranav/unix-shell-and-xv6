@@ -169,175 +169,87 @@ static void run_output_helper(Command *cmd, int read_fd) {
     free(fds);
 }
 
-int execute_pipeline(Pipeline *pipeline) {
+int execute_pipeline(Pipeline *pipeline, bool *failed_to_start) {
     if (pipeline == NULL || pipeline->cmd_count == 0) return 0;
-    
-    if (pipeline->cmd_count == 1) {
-        Command *cmd = &pipeline->cmds[0];
-        
-        if (!verify_input_files(cmd) || !verify_output_files(cmd)) {
-            return 1;
-        }
-        
-        if (is_builtin(cmd->args[0])) {
-            int saved_in = dup(STDIN_FILENO);
-            int saved_out = dup(STDOUT_FILENO);
-            
-            if (cmd->in_redir_count == 1) {
-                int fd = open(cmd->in_redirs[0].filepath, O_RDONLY);
-                if (fd >= 0) {
-                    dup2(fd, STDIN_FILENO);
-                    close(fd);
-                }
-            } else if (cmd->in_redir_count > 1) {
-                int in_p[2];
-                if (pipe(in_p) == 0) {
-                    pid_t helper = fork();
-                    if (helper == 0) {
-                        close(in_p[0]);
-                        run_input_helper(cmd, in_p[1]);
-                        close(in_p[1]);
-                        exit(0);
-                    }
-                    close(in_p[1]);
-                    dup2(in_p[0], STDIN_FILENO);
-                    close(in_p[0]);
-                }
-            }
-            
-            if (cmd->out_redir_count == 1) {
-                int flags = O_WRONLY | O_CREAT | (cmd->out_redirs[0].append ? O_APPEND : O_TRUNC);
-                int fd = open(cmd->out_redirs[0].filepath, flags, 0644);
-                if (fd >= 0) {
-                    dup2(fd, STDOUT_FILENO);
-                    close(fd);
-                }
-            } else if (cmd->out_redir_count > 1) {
-                int out_p[2];
-                if (pipe(out_p) == 0) {
-                    pid_t helper = fork();
-                    if (helper == 0) {
-                        close(out_p[1]);
-                        run_output_helper(cmd, out_p[0]);
-                        close(out_p[0]);
-                        exit(0);
-                    }
-                    close(out_p[0]);
-                    dup2(out_p[1], STDOUT_FILENO);
-                    close(out_p[1]);
-                }
-            }
-            
-            int status = exec_builtin(cmd);
-            
-            dup2(saved_in, STDIN_FILENO);
-            close(saved_in);
-            dup2(saved_out, STDOUT_FILENO);
-            close(saved_out);
-            
-            return status;
-        }
-        
-        pid_t pid = fork();
-        if (pid == 0) {
-            if (cmd->in_redir_count == 1) {
-                int fd = open(cmd->in_redirs[0].filepath, O_RDONLY);
-                if (fd >= 0) {
-                    dup2(fd, STDIN_FILENO);
-                    close(fd);
-                }
-            } else if (cmd->in_redir_count > 1) {
-                int in_p[2];
-                if (pipe(in_p) == 0) {
-                    pid_t helper = fork();
-                    if (helper == 0) {
-                        close(in_p[0]);
-                        run_input_helper(cmd, in_p[1]);
-                        close(in_p[1]);
-                        exit(0);
-                    }
-                    close(in_p[1]);
-                    dup2(in_p[0], STDIN_FILENO);
-                    close(in_p[0]);
-                }
-            }
-            
-            if (cmd->out_redir_count == 1) {
-                int flags = O_WRONLY | O_CREAT | (cmd->out_redirs[0].append ? O_APPEND : O_TRUNC);
-                int fd = open(cmd->out_redirs[0].filepath, flags, 0644);
-                if (fd >= 0) {
-                    dup2(fd, STDOUT_FILENO);
-                    close(fd);
-                }
-            } else if (cmd->out_redir_count > 1) {
-                int out_p[2];
-                if (pipe(out_p) == 0) {
-                    pid_t helper = fork();
-                    if (helper == 0) {
-                        close(out_p[1]);
-                        run_output_helper(cmd, out_p[0]);
-                        close(out_p[0]);
-                        exit(0);
-                    }
-                    close(out_p[0]);
-                    dup2(out_p[1], STDOUT_FILENO);
-                    close(out_p[1]);
-                }
-            }
-            
-            char resolved_path[MAX_PATH];
-            if (resolve_command(cmd->args[0], resolved_path, sizeof(resolved_path))) {
-                if (cmd->args[0][0] == '%') {
-                    cmd->args[0] = cmd->args[0] + 1;
-                }
-                execv(resolved_path, cmd->args);
-                perror("execv");
-                exit(EXIT_FAILURE);
-            } else {
-                fprintf(stderr, "cshell: command not found (%s)\n", cmd->args[0]);
-                exit(127);
-            }
-        } else if (pid > 0) {
-            int status;
-            waitpid(pid, &status, 0);
-            if (WIFEXITED(status)) {
-                return WEXITSTATUS(status);
-            }
-            return 1;
-        } else {
-            perror("fork");
-            return 1;
-        }
-    }
-    
+    if (failed_to_start) *failed_to_start = false;
+
     int cmd_count = pipeline->cmd_count;
 
-    // Verify all redirections for all commands first
     for (int i = 0; i < cmd_count; i++) {
         if (!verify_input_files(&pipeline->cmds[i]) || !verify_output_files(&pipeline->cmds[i])) {
             return 1;
         }
     }
 
-    // Allocate pipes
-    int (*pipes)[2] = malloc((cmd_count - 1) * sizeof(*pipes));
-    if (pipes == NULL) {
-        perror("malloc");
-        return 1;
-    }
-    for (int i = 0; i < cmd_count - 1; i++) {
-        if (pipe(pipes[i]) < 0) {
-            perror("pipe");
-            free(pipes);
-            return 1;
+    if (cmd_count == 1) {
+        Command *cmd = &pipeline->cmds[0];
+        char resolved_path[MAX_PATH];
+        
+        bool is_b = is_builtin(cmd->args[0]);
+        if (!is_b && !resolve_command(cmd->args[0], resolved_path, sizeof(resolved_path))) {
+            fprintf(stderr, "cshell: command not found (%s)\n", cmd->args[0]);
+            if (failed_to_start) *failed_to_start = true;
+            return -2;
+        }
+
+        if (is_b) {
+            int saved_in = dup(STDIN_FILENO);
+            int saved_out = dup(STDOUT_FILENO);
+
+            if (cmd->in_redir_count == 1) {
+                int fd = open(cmd->in_redirs[0].filepath, O_RDONLY);
+                if (fd >= 0) { dup2(fd, STDIN_FILENO); close(fd); }
+            } else if (cmd->in_redir_count > 1) {
+                int in_p[2];
+                if (pipe(in_p) == 0) {
+                    pid_t helper = fork();
+                    if (helper == 0) {
+                        close(in_p[0]); run_input_helper(cmd, in_p[1]); close(in_p[1]); exit(0);
+                    }
+                    close(in_p[1]); dup2(in_p[0], STDIN_FILENO); close(in_p[0]);
+                }
+            }
+
+            if (cmd->out_redir_count == 1) {
+                int flags = O_WRONLY | O_CREAT | (cmd->out_redirs[0].append ? O_APPEND : O_TRUNC);
+                int fd = open(cmd->out_redirs[0].filepath, flags, 0644);
+                if (fd >= 0) { dup2(fd, STDOUT_FILENO); close(fd); }
+            } else if (cmd->out_redir_count > 1) {
+                int out_p[2];
+                if (pipe(out_p) == 0) {
+                    pid_t helper = fork();
+                    if (helper == 0) {
+                        close(out_p[1]); run_output_helper(cmd, out_p[0]); close(out_p[0]); exit(0);
+                    }
+                    close(out_p[0]); dup2(out_p[1], STDOUT_FILENO); close(out_p[1]);
+                }
+            }
+
+            int status = exec_builtin(cmd);
+
+            dup2(saved_in, STDIN_FILENO); close(saved_in);
+            dup2(saved_out, STDOUT_FILENO); close(saved_out);
+
+            while (wait(NULL) > 0);
+            return status;
         }
     }
 
-    // Spawn child processes
+    int (*pipes)[2] = NULL;
+    if (cmd_count > 1) {
+        pipes = malloc((cmd_count - 1) * sizeof(*pipes));
+        if (pipes == NULL) { perror("malloc"); return 1; }
+        for (int i = 0; i < cmd_count - 1; i++) {
+            if (pipe(pipes[i]) < 0) {
+                perror("pipe"); free(pipes); return 1;
+            }
+        }
+    }
+
     pid_t *pids = malloc(cmd_count * sizeof(pid_t));
     if (pids == NULL) {
         perror("malloc");
-        free(pipes);
+        if (pipes) free(pipes);
         return 1;
     }
 
@@ -346,107 +258,55 @@ int execute_pipeline(Pipeline *pipeline) {
         pids[i] = fork();
 
         if (pids[i] == 0) {
-            // Child process
-            // Set up pipeline input redirection
-            if (i > 0) {
-                dup2(pipes[i - 1][0], STDIN_FILENO);
-            }
-            // Set up pipeline output redirection
-            if (i < cmd_count - 1) {
-                dup2(pipes[i][1], STDOUT_FILENO);
-            }
+            if (i > 0) dup2(pipes[i - 1][0], STDIN_FILENO);
+            if (i < cmd_count - 1) dup2(pipes[i][1], STDOUT_FILENO);
 
-            // Close all pipeline pipe descriptors in the child
             for (int p = 0; p < cmd_count - 1; p++) {
-                close(pipes[p][0]);
-                close(pipes[p][1]);
+                close(pipes[p][0]); close(pipes[p][1]);
             }
 
-
-
-            // Override input redirection if command has specific redirects
             if (cmd->in_redir_count == 1) {
                 int fd = open(cmd->in_redirs[0].filepath, O_RDONLY);
-                if (fd >= 0) {
-                    dup2(fd, STDIN_FILENO);
-                    close(fd);
-                }
+                if (fd >= 0) { dup2(fd, STDIN_FILENO); close(fd); }
             } else if (cmd->in_redir_count > 1) {
                 int in_p[2];
                 if (pipe(in_p) == 0) {
-                    pid_t helper_pid = fork();
-                    if (helper_pid == 0) {
-                        close(in_p[0]);
-                        run_input_helper(cmd, in_p[1]);
-                        close(in_p[1]);
-                        exit(0);
-                    }
-                    close(in_p[1]);
-                    dup2(in_p[0], STDIN_FILENO);
-                    close(in_p[0]);
+                    if (fork() == 0) { close(in_p[0]); run_input_helper(cmd, in_p[1]); close(in_p[1]); exit(0); }
+                    close(in_p[1]); dup2(in_p[0], STDIN_FILENO); close(in_p[0]);
                 }
             }
 
-            // Override output redirection if command has specific redirects
             if (cmd->out_redir_count == 1) {
                 int flags = O_WRONLY | O_CREAT | (cmd->out_redirs[0].append ? O_APPEND : O_TRUNC);
                 int fd = open(cmd->out_redirs[0].filepath, flags, 0644);
-                if (fd >= 0) {
-                    dup2(fd, STDOUT_FILENO);
-                    close(fd);
-                }
+                if (fd >= 0) { dup2(fd, STDOUT_FILENO); close(fd); }
             } else if (cmd->out_redir_count > 1) {
                 int out_p[2];
                 if (pipe(out_p) == 0) {
-                    pid_t helper_pid = fork();
-                    if (helper_pid == 0) {
-                        close(out_p[1]);
-                        run_output_helper(cmd, out_p[0]);
-                        close(out_p[0]);
-                        exit(0);
-                    }
-                    close(out_p[0]);
-                    dup2(out_p[1], STDOUT_FILENO);
-                    close(out_p[1]);
+                    if (fork() == 0) { close(out_p[1]); run_output_helper(cmd, out_p[0]); close(out_p[0]); exit(0); }
+                    close(out_p[0]); dup2(out_p[1], STDOUT_FILENO); close(out_p[1]);
                 }
             }
 
-            // Execute the command
             if (is_builtin(cmd->args[0])) {
-                int status = exec_builtin(cmd);
-                exit(status);
+                exit(exec_builtin(cmd));
             } else {
                 char resolved_path[MAX_PATH];
                 if (resolve_command(cmd->args[0], resolved_path, sizeof(resolved_path))) {
-                    char *original_argv0 = cmd->args[0];
-                    if (cmd->args[0][0] == '%') {
-                        cmd->args[0] = cmd->args[0] + 1;
-                    }
+                    if (cmd->args[0][0] == '%') cmd->args[0]++;
                     execv(resolved_path, cmd->args);
                     perror("execv");
-                    cmd->args[0] = original_argv0; // Keep state clean if execution failed
                     exit(1);
                 } else {
                     fprintf(stderr, "cshell: command not found (%s)\n", cmd->args[0]);
                     exit(127);
                 }
             }
-        } else if (pids[i] < 0) {
-            perror("fork");
-            for (int p = 0; p < cmd_count - 1; p++) {
-                close(pipes[p][0]);
-                close(pipes[p][1]);
-            }
-            free(pipes);
-            free(pids);
-            return 1;
         }
     }
 
-    // Parent process cleanup and wait
     for (int p = 0; p < cmd_count - 1; p++) {
-        close(pipes[p][0]);
-        close(pipes[p][1]);
+        close(pipes[p][0]); close(pipes[p][1]);
     }
 
     int last_status = 0;
@@ -454,20 +314,29 @@ int execute_pipeline(Pipeline *pipeline) {
         int status;
         if (waitpid(pids[i], &status, 0) == pids[i]) {
             if (i == cmd_count - 1) {
-                if (WIFEXITED(status)) {
-                    last_status = WEXITSTATUS(status);
-                } else if (WIFSIGNALED(status)) {
-                    last_status = 128 + WTERMSIG(status);
-                }
+                if (WIFEXITED(status)) last_status = WEXITSTATUS(status);
+                else if (WIFSIGNALED(status)) last_status = 128 + WTERMSIG(status);
             }
         }
     }
 
-    // Reap all helper/tee processes
-    while (wait(NULL) > 0);
+    while (waitpid(-1, NULL, 0) > 0);
 
-    free(pipes);
+    if (pipes) free(pipes);
     free(pids);
 
     return last_status;
+}
+
+int execute_sequence(Sequence *seq) {
+    if (seq == NULL || seq->pipeline_count == 0) return 0;
+    
+    for (int i = 0; i < seq->pipeline_count; i++) {
+        bool failed_to_start = false;
+        execute_pipeline(&seq->pipelines[i], &failed_to_start);
+        if (failed_to_start) {
+            break;
+        }
+    }
+    return 0;
 }

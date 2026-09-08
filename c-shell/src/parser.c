@@ -113,7 +113,7 @@ static bool parse_BG(ParserState *state) {
     return false;
 }
 
-void free_pipeline(Pipeline *pipeline) {
+static void free_pipeline(Pipeline *pipeline) {
     if (pipeline == NULL || pipeline->cmds == NULL) return;
     for (int i = 0; i < pipeline->cmd_count; i++) {
         Command *cmd = &pipeline->cmds[i];
@@ -139,6 +139,16 @@ void free_pipeline(Pipeline *pipeline) {
     free(pipeline->cmds);
     pipeline->cmds = NULL;
     pipeline->cmd_count = 0;
+}
+
+void free_sequence(Sequence *seq) {
+    if (seq == NULL || seq->pipelines == NULL) return;
+    for (int i = 0; i < seq->pipeline_count; i++) {
+        free_pipeline(&seq->pipelines[i]);
+    }
+    free(seq->pipelines);
+    seq->pipelines = NULL;
+    seq->pipeline_count = 0;
 }
 
 static void init_command(Command *cmd) {
@@ -185,7 +195,7 @@ static void add_out_redir(Command *cmd, const char *path, bool append) {
     cmd->out_redir_count++;
 }
 
-bool parse_pipeline(const Token *tokens, int count, Pipeline *out_pipeline) {
+bool parse_sequence(const Token *tokens, int count, Sequence *out_seq) {
     ParserState state = {tokens, count, 0};
 
     // 1. Verify grammar syntax
@@ -194,51 +204,93 @@ bool parse_pipeline(const Token *tokens, int count, Pipeline *out_pipeline) {
         return false;
     }
 
-    // 2. If it's an empty line (just TOKEN_EOF), return true with 0 commands
+    // 2. If it's an empty line (just TOKEN_EOF), return true with 0 pipelines
     if (tokens[0].type == TOKEN_EOF) {
-        out_pipeline->cmds = NULL;
-        out_pipeline->cmd_count = 0;
+        out_seq->pipelines = NULL;
+        out_seq->pipeline_count = 0;
         return true;
     }
 
-    // 3. Build pipeline for the first command group (up to ;, & or EOF)
-    int cmd_count = 1;
+    // 3. Count pipelines (separated by ;) up to &
+    int pipeline_count = 1;
     for (int i = 0; i < count; i++) {
-        if (tokens[i].type == TOKEN_SEMI || tokens[i].type == TOKEN_AMP) {
+        if (tokens[i].type == TOKEN_AMP) {
+            break; // D2 not implemented here
+        }
+        if (tokens[i].type == TOKEN_SEMI) {
+            if (i + 1 < count && tokens[i+1].type != TOKEN_EOF && tokens[i+1].type != TOKEN_AMP) {
+                pipeline_count++;
+            }
+        }
+    }
+
+    out_seq->pipelines = malloc(pipeline_count * sizeof(Pipeline));
+    if (out_seq->pipelines == NULL) {
+        perror("malloc");
+        return false;
+    }
+    out_seq->pipeline_count = pipeline_count;
+    
+    // Iterate over tokens again and construct the sequence
+    int cur_pipe_idx = 0;
+    int cur_cmd_idx = 0;
+    int cmd_count = 1;
+    
+    // First, count commands in the first pipeline
+    for (int i = 0; i < count; i++) {
+        if (tokens[i].type == TOKEN_SEMI || tokens[i].type == TOKEN_AMP || tokens[i].type == TOKEN_EOF) {
             break;
         }
         if (tokens[i].type == TOKEN_PIPE) {
             cmd_count++;
         }
     }
-
-    out_pipeline->cmds = malloc(cmd_count * sizeof(Command));
-    if (out_pipeline->cmds == NULL) {
-        perror("malloc");
-        return false;
-    }
-    out_pipeline->cmd_count = cmd_count;
+    
+    out_seq->pipelines[0].cmds = malloc(cmd_count * sizeof(Command));
+    out_seq->pipelines[0].cmd_count = cmd_count;
     for (int i = 0; i < cmd_count; i++) {
-        init_command(&out_pipeline->cmds[i]);
+        init_command(&out_seq->pipelines[0].cmds[i]);
     }
 
-    int cur_cmd_idx = 0;
     TokenType last_op = TOKEN_EOF;
 
     for (int i = 0; i < count; i++) {
         TokenType t_type = tokens[i].type;
 
-        if (t_type == TOKEN_SEMI || t_type == TOKEN_AMP || t_type == TOKEN_EOF) {
+        if (t_type == TOKEN_EOF || t_type == TOKEN_AMP) {
             break;
         }
-
-        if (t_type == TOKEN_PIPE) {
+        
+        if (t_type == TOKEN_SEMI) {
+            if (i + 1 < count && tokens[i+1].type != TOKEN_EOF && tokens[i+1].type != TOKEN_AMP) {
+                cur_pipe_idx++;
+                cur_cmd_idx = 0;
+                last_op = TOKEN_EOF;
+                
+                // Count commands for the next pipeline
+                cmd_count = 1;
+                for (int j = i + 1; j < count; j++) {
+                    if (tokens[j].type == TOKEN_SEMI || tokens[j].type == TOKEN_AMP || tokens[j].type == TOKEN_EOF) {
+                        break;
+                    }
+                    if (tokens[j].type == TOKEN_PIPE) {
+                        cmd_count++;
+                    }
+                }
+                
+                out_seq->pipelines[cur_pipe_idx].cmds = malloc(cmd_count * sizeof(Command));
+                out_seq->pipelines[cur_pipe_idx].cmd_count = cmd_count;
+                for (int j = 0; j < cmd_count; j++) {
+                    init_command(&out_seq->pipelines[cur_pipe_idx].cmds[j]);
+                }
+            }
+        } else if (t_type == TOKEN_PIPE) {
             cur_cmd_idx++;
             last_op = TOKEN_EOF;
         } else if (t_type == TOKEN_LT || t_type == TOKEN_GT || t_type == TOKEN_GTGT) {
             last_op = t_type;
         } else if (t_type == TOKEN_WORD) {
-            Command *cur_cmd = &out_pipeline->cmds[cur_cmd_idx];
+            Command *cur_cmd = &out_seq->pipelines[cur_pipe_idx].cmds[cur_cmd_idx];
             if (last_op == TOKEN_LT) {
                 add_in_redir(cur_cmd, tokens[i].value);
                 last_op = TOKEN_EOF;
