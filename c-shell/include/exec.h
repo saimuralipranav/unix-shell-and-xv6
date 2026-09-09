@@ -17,4 +17,7 @@ int execute_pipeline(Pipeline *pipeline, bool *failed_to_start);
 void register_background_job(pid_t pid, const char *cmd_name);
 void check_background_jobs(void);
 
+// Command resolution
+bool resolve_command(const char *cmd_name, char *out_path, size_t max_len);
+
 #endif // EXEC_H

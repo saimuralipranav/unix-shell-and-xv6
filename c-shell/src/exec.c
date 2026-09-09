@@ -27,7 +27,7 @@ static bool is_executable(const char *path) {
 // ---------------------------------------------------------
 // Resolve command path according to C1 requirements
 // ---------------------------------------------------------
-static bool resolve_command(const char *cmd_name, char *out_path, size_t max_len) {
+bool resolve_command(const char *cmd_name, char *out_path, size_t max_len) {
     if (cmd_name == NULL || strlen(cmd_name) == 0) return false;
 
     // Rule 1: contains a '/' -> treat as literal path
