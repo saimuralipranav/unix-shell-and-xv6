@@ -6,6 +6,7 @@
 #include "activities.h"
 #include "resume.h"
 #include "ping.h"
+#include "spy.h"
 #include <string.h>
 
 bool is_builtin(const char *cmd_name) {
@@ -16,7 +17,8 @@ bool is_builtin(const char *cmd_name) {
             strcmp(cmd_name, "locate") == 0 ||
             strcmp(cmd_name, "activities") == 0 ||
             strcmp(cmd_name, "resume") == 0 ||
-            strcmp(cmd_name, "ping") == 0);
+            strcmp(cmd_name, "ping") == 0 ||
+            strcmp(cmd_name, "spy") == 0);
 }
 
 int exec_builtin(Command *cmd) {
@@ -35,6 +37,8 @@ int exec_builtin(Command *cmd) {
         return builtin_resume(cmd);
     } else if (strcmp(cmd->args[0], "ping") == 0) {
         return builtin_ping(cmd);
+    } else if (strcmp(cmd->args[0], "spy") == 0) {
+        return builtin_spy(cmd);
     }
     return 1;
 }
