@@ -1,5 +1,6 @@
 #include "exec.h"
 #include "builtins.h"
+#include "jobs.h"
 #include "shell.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -187,49 +188,23 @@ static void run_output_helper(Command *cmd, int read_fd) {
 }
 
 // ---------------------------------------------------------
-// Job Control
+// Job Control and Command Formatting
 // ---------------------------------------------------------
-typedef struct {
-    int job_number;
-    pid_t pid;
-    char command_name[256];
-    bool active;
-} BackgroundJob;
-
-#define MAX_BG_JOBS 1024
-static BackgroundJob bg_jobs[MAX_BG_JOBS];
-static int next_job_number = 1;
-
-void register_background_job(pid_t pid, const char *cmd_name) {
-    for (int i = 0; i < MAX_BG_JOBS; i++) {
-        if (!bg_jobs[i].active) {
-            bg_jobs[i].job_number = next_job_number++;
-            bg_jobs[i].pid = pid;
-            strncpy(bg_jobs[i].command_name, cmd_name, sizeof(bg_jobs[i].command_name) - 1);
-            bg_jobs[i].command_name[255] = '\0';
-            bg_jobs[i].active = true;
-            printf("[%d] %d\n", bg_jobs[i].job_number, pid);
-            return;
+static void format_pipeline_cmdline(Pipeline *pipeline, char *out, size_t max_len) {
+    out[0] = '\0';
+    for (int i = 0; i < pipeline->cmd_count; i++) {
+        if (i > 0) {
+            strncat(out, " | ", max_len - strlen(out) - 1);
+        }
+        for (int a = 0; a < pipeline->cmds[i].argc; a++) {
+            if (a > 0) strncat(out, " ", max_len - strlen(out) - 1);
+            strncat(out, pipeline->cmds[i].args[a], max_len - strlen(out) - 1);
         }
     }
 }
 
 void check_background_jobs(void) {
-    int status;
-    pid_t pid;
-    while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
-        for (int i = 0; i < MAX_BG_JOBS; i++) {
-            if (bg_jobs[i].active && bg_jobs[i].pid == pid) {
-                if (WIFEXITED(status)) {
-                    printf("%s with pid %d exited normally\n", bg_jobs[i].command_name, pid);
-                } else if (WIFSIGNALED(status)) {
-                    printf("%s with pid %d exited abnormally\n", bg_jobs[i].command_name, pid);
-                }
-                bg_jobs[i].active = false;
-                break;
-            }
-        }
-    }
+    reap_background_jobs();
 }
 
 // ---------------------------------------------------------
@@ -262,14 +237,17 @@ int execute_pipeline(Pipeline *pipeline, bool *failed_to_start) {
             int saved_in = dup(STDIN_FILENO);
             int saved_out = dup(STDOUT_FILENO);
 
+            pid_t helper_in = -1;
+            pid_t helper_out = -1;
+
             if (cmd->in_redir_count == 1) {
                 int fd = open(cmd->in_redirs[0].filepath, O_RDONLY);
                 if (fd >= 0) { dup2(fd, STDIN_FILENO); close(fd); }
             } else if (cmd->in_redir_count > 1) {
                 int in_p[2];
                 if (pipe(in_p) == 0) {
-                    pid_t helper = fork();
-                    if (helper == 0) {
+                    helper_in = fork();
+                    if (helper_in == 0) {
                         close(in_p[0]); run_input_helper(cmd, in_p[1]); close(in_p[1]); exit(0);
                     }
                     close(in_p[1]); dup2(in_p[0], STDIN_FILENO); close(in_p[0]);
@@ -283,8 +261,8 @@ int execute_pipeline(Pipeline *pipeline, bool *failed_to_start) {
             } else if (cmd->out_redir_count > 1) {
                 int out_p[2];
                 if (pipe(out_p) == 0) {
-                    pid_t helper = fork();
-                    if (helper == 0) {
+                    helper_out = fork();
+                    if (helper_out == 0) {
                         close(out_p[1]); run_output_helper(cmd, out_p[0]); close(out_p[0]); exit(0);
                     }
                     close(out_p[0]); dup2(out_p[1], STDOUT_FILENO); close(out_p[1]);
@@ -296,7 +274,8 @@ int execute_pipeline(Pipeline *pipeline, bool *failed_to_start) {
             dup2(saved_in, STDIN_FILENO); close(saved_in);
             dup2(saved_out, STDOUT_FILENO); close(saved_out);
 
-            while (wait(NULL) > 0);
+            if (helper_in > 0) waitpid(helper_in, NULL, 0);
+            if (helper_out > 0) waitpid(helper_out, NULL, 0);
             return status;
         }
     }
@@ -324,6 +303,15 @@ int execute_pipeline(Pipeline *pipeline, bool *failed_to_start) {
         pids[i] = fork();
 
         if (pids[i] == 0) {
+            // Child: set process group
+            setpgid(0, (i == 0 ? 0 : pids[0]));
+
+            // Reset signal dispositions for child
+            signal(SIGINT, SIG_DFL);
+            signal(SIGTSTP, SIG_DFL);
+            signal(SIGTTOU, SIG_DFL);
+            signal(SIGTTIN, SIG_DFL);
+
             if (i > 0) dup2(pipes[i - 1][0], STDIN_FILENO);
             if (i < cmd_count - 1) dup2(pipes[i][1], STDOUT_FILENO);
 
@@ -368,6 +356,9 @@ int execute_pipeline(Pipeline *pipeline, bool *failed_to_start) {
                     exit(127);
                 }
             }
+        } else if (pids[i] > 0) {
+            // Parent: set process group immediately after fork
+            setpgid(pids[i], (i == 0 ? pids[0] : pids[0]));
         }
     }
 
@@ -376,24 +367,59 @@ int execute_pipeline(Pipeline *pipeline, bool *failed_to_start) {
     }
 
     if (pipeline->is_background) {
-        register_background_job(pids[0], pipeline->cmds[0].args[0]);
+        char cmd_line[1024];
+        format_pipeline_cmdline(pipeline, cmd_line, sizeof(cmd_line));
+        TrackedJob *job = create_job(pids[0], cmd_line, true);
+        if (job != NULL) {
+            for (int i = 0; i < cmd_count; i++) {
+                job_add_process(job, pids[i], pipeline->cmds[i].args[0]);
+            }
+            printf("[%d] %d\n", job->job_number, pids[0]);
+            fflush(stdout);
+        }
         if (pipes) free(pipes);
         free(pids);
         return 0; // Return immediately for background jobs
     }
 
+    // Foreground execution: give terminal to the child process group
+    pid_t shell_pgid = getpgrp();
+    if (isatty(STDIN_FILENO)) {
+        tcsetpgrp(STDIN_FILENO, pids[0]);
+    }
+
     int last_status = 0;
+    bool stopped = false;
     for (int i = 0; i < cmd_count; i++) {
         int status;
-        if (waitpid(pids[i], &status, 0) == pids[i]) {
-            if (i == cmd_count - 1) {
+        if (waitpid(pids[i], &status, WUNTRACED) == pids[i]) {
+            if (WIFSTOPPED(status)) {
+                stopped = true;
+            } else if (i == cmd_count - 1) {
                 if (WIFEXITED(status)) last_status = WEXITSTATUS(status);
                 else if (WIFSIGNALED(status)) last_status = 128 + WTERMSIG(status);
             }
         }
     }
 
-    while (waitpid(-1, NULL, 0) > 0);
+    // Reclaim terminal for shell
+    if (isatty(STDIN_FILENO)) {
+        tcsetpgrp(STDIN_FILENO, shell_pgid);
+    }
+
+    if (stopped) {
+        char cmd_line[1024];
+        format_pipeline_cmdline(pipeline, cmd_line, sizeof(cmd_line));
+        TrackedJob *job = create_job(pids[0], cmd_line, false);
+        if (job != NULL) {
+            for (int i = 0; i < cmd_count; i++) {
+                job_add_process(job, pids[i], pipeline->cmds[i].args[0]);
+                job->procs[i].state = PROC_STOPPED;
+            }
+            printf("[%d] + Stopped    %s\n", job->job_number, job->cmd_line);
+            fflush(stdout);
+        }
+    }
 
     if (pipes) free(pipes);
     free(pids);
