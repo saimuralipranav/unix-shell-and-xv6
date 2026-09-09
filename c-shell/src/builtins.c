@@ -4,6 +4,7 @@
 #include "peek.h"
 #include "locate.h"
 #include "activities.h"
+#include "resume.h"
 #include <string.h>
 
 bool is_builtin(const char *cmd_name) {
@@ -12,7 +13,8 @@ bool is_builtin(const char *cmd_name) {
             strcmp(cmd_name, "reveal") == 0 ||
             strcmp(cmd_name, "peek") == 0 ||
             strcmp(cmd_name, "locate") == 0 ||
-            strcmp(cmd_name, "activities") == 0);
+            strcmp(cmd_name, "activities") == 0 ||
+            strcmp(cmd_name, "resume") == 0);
 }
 
 int exec_builtin(Command *cmd) {
@@ -27,6 +29,8 @@ int exec_builtin(Command *cmd) {
         return builtin_locate(cmd);
     } else if (strcmp(cmd->args[0], "activities") == 0) {
         return builtin_activities(cmd);
+    } else if (strcmp(cmd->args[0], "resume") == 0) {
+        return builtin_resume(cmd);
     }
     return 1;
 }
