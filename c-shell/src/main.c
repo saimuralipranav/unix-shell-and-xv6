@@ -11,6 +11,7 @@
 #include <unistd.h>
 
 static volatile sig_atomic_t sigint_received = 0;
+static volatile sig_atomic_t sigtstp_received = 0;
 
 void sigchld_handler(int sig) {
     (void)sig;
@@ -22,6 +23,11 @@ void sigint_handler(int sig) {
     sigint_received = 1;
 }
 
+void sigtstp_handler(int sig) {
+    (void)sig;
+    sigtstp_received = 1;
+}
+
 int main(int argc, char *argv[]) {
     // Initialize shell global state (home directory, username, hostname)
     init_shell_state();
@@ -30,10 +36,14 @@ int main(int argc, char *argv[]) {
     // Ignore SIGTTOU so tcsetpgrp does not stop shell
     signal(SIGTTOU, SIG_IGN);
 
-    // Shell ignores SIGTSTP so it is not stopped by Ctrl-Z
-    signal(SIGTSTP, SIG_IGN);
+    // Set up SIGTSTP handler so shell stays alive and redraws prompt
+    struct sigaction sa_tstp;
+    memset(&sa_tstp, 0, sizeof(sa_tstp));
+    sa_tstp.sa_handler = sigtstp_handler;
+    sigemptyset(&sa_tstp.sa_mask);
+    sigaction(SIGTSTP, &sa_tstp, NULL);
 
-    // Set up SIGINT handler
+    // Set up SIGINT handler so shell stays alive and redraws prompt
     struct sigaction sa_int;
     memset(&sa_int, 0, sizeof(sa_int));
     sa_int.sa_handler = sigint_handler;
@@ -58,30 +68,67 @@ int main(int argc, char *argv[]) {
         // 1. Display the prompt
         print_prompt();
 
-        // 2. Read user input
-        if (fgets(input, sizeof(input), stdin) == NULL) {
-            if (errno == EINTR) {
-                clearerr(stdin);
-                if (sigint_received) {
-                    sigint_received = 0;
-                    printf("\n");
-                }
-                continue;
-            }
+        // 2. Read user input (handle partial input across Ctrl-D)
+        size_t total_len = 0;
+        input[0] = '\0';
+        bool should_exit = false;
 
-            if (has_stopped_jobs()) {
-                if (!prev_was_eof) {
-                    printf("cshell: there are stopped jobs\n");
-                    prev_was_eof = true;
+        while (total_len < MAX_INPUT) {
+            if (fgets(input + total_len, sizeof(input) - total_len, stdin) == NULL) {
+                if (errno == EINTR) {
+                    clearerr(stdin);
+                    if (sigint_received || sigtstp_received) {
+                        sigint_received = 0;
+                        sigtstp_received = 0;
+                        printf("\n");
+                        total_len = 0;
+                        input[0] = '\0';
+                        break;
+                    }
+                    continue;
+                }
+
+                // Ctrl-D on non-empty line: keep text and stay alive
+                if (total_len > 0) {
                     clearerr(stdin);
                     continue;
                 }
+
+                // Ctrl-D on empty line
+                if (has_stopped_jobs()) {
+                    if (!prev_was_eof) {
+                        printf("cshell: there are stopped jobs\n");
+                        prev_was_eof = true;
+                        clearerr(stdin);
+                        break;
+                    }
+                }
+
+                // EOF (Ctrl+D) exit
+                printf("\n");
+                sighup_all_jobs();
+                should_exit = true;
+                break;
             }
 
-            // EOF (Ctrl+D) exit
-            printf("\n");
-            sighup_all_jobs();
+            total_len = strlen(input);
+            if (total_len > 0 && (input[total_len - 1] == '\n' || input[total_len - 1] == '\r')) {
+                break;
+            }
+
+            // If feof after reading without newline (Ctrl-D on partial line)
+            if (feof(stdin)) {
+                clearerr(stdin);
+                continue;
+            }
+        }
+
+        if (should_exit) {
             break;
+        }
+
+        if (total_len == 0) {
+            continue;
         }
 
         prev_was_eof = false;
