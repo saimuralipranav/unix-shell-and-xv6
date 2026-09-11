@@ -146,6 +146,16 @@ found:
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
 
+  // Initialize scheduler and timing fields
+  p->priority = 0;
+  p->ticks_used = 0;
+  p->queue_entry_ticks = ticks;
+  p->creation_time = ticks;
+  p->first_run_time = (uint)-1;
+  p->exit_time = 0;
+  p->total_run_ticks = 0;
+  p->total_wait_ticks = 0;
+
   return p;
 }
 
@@ -168,6 +178,15 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
+
+  p->priority = 0;
+  p->ticks_used = 0;
+  p->queue_entry_ticks = 0;
+  p->creation_time = 0;
+  p->first_run_time = (uint)-1;
+  p->exit_time = 0;
+  p->total_run_ticks = 0;
+  p->total_wait_ticks = 0;
 }
 
 // Create a user page table for a given process, with no user memory,

@@ -101,4 +101,14 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+
+  // Scheduling & metric tracking fields
+  int priority;              // MLFQ priority queue: 0 (highest) to 3 (lowest)
+  int ticks_used;            // Ticks consumed in current time slice
+  uint queue_entry_ticks;    // Timestamp when process entered ready state in this queue
+  uint creation_time;        // Tick when process was created
+  uint first_run_time;       // Tick when process was first scheduled
+  uint exit_time;            // Tick when process exited
+  uint total_run_ticks;      // Total ticks spent in RUNNING state
+  uint total_wait_ticks;     // Total ticks spent in RUNNABLE state (ready queue)
 };
