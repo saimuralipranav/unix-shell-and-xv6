@@ -538,9 +538,37 @@ scheduler(void)
     intr_off();
 
     int found = 0;
+#if defined(FIFO)
+    struct proc *best_p = 0;
     for (p = proc; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
       if (p->state == RUNNABLE) {
+        if (best_p == 0 || p->creation_time < best_p->creation_time) {
+          if (best_p)
+            release(&best_p->lock);
+          best_p = p;
+          continue;
+        }
+      }
+      release(&p->lock);
+    }
+
+    if (best_p != 0) {
+      if (best_p->first_run_time == (uint)-1)
+        best_p->first_run_time = ticks;
+      best_p->state = RUNNING;
+      c->proc = best_p;
+      swtch(&c->context, &best_p->context);
+      c->proc = 0;
+      found = 1;
+      release(&best_p->lock);
+    }
+#else
+    for (p = proc; p < &proc[NPROC]; p++) {
+      acquire(&p->lock);
+      if (p->state == RUNNABLE) {
+        if (p->first_run_time == (uint)-1)
+          p->first_run_time = ticks;
         // Switch to chosen process.  It is the process's job
         // to release its lock and then reacquire it
         // before jumping back to us.
@@ -558,6 +586,7 @@ scheduler(void)
       }
       release(&p->lock);
     }
+#endif
     if (found == 0) {
       // nothing to run; stop running on this core until an interrupt.
       asm volatile("wfi");
