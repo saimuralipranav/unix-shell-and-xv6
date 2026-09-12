@@ -935,7 +935,19 @@ procdump(void)
       state = states[p->state];
     else
       state = "???";
-    printk("%d %s %s", p->pid, state, p->name);
-    printk("\n");
+#if defined(MLFQ)
+    int quanta[4] = {1, 4, 8, 16};
+    int q_max = (p->priority >= 0 && p->priority < 4) ? quanta[p->priority] : -1;
+    printk("%d %s %s q=%d ticks=%d/%d rtime=%d wtime=%d\n",
+           p->pid, state, p->name, p->priority, p->ticks_used, q_max,
+           p->total_run_ticks, p->total_wait_ticks);
+#elif defined(FIFO)
+    printk("%d %s %s ctime=%d rtime=%d wtime=%d\n",
+           p->pid, state, p->name, p->creation_time,
+           p->total_run_ticks, p->total_wait_ticks);
+#else
+    printk("%d %s %s rtime=%d wtime=%d\n",
+           p->pid, state, p->name, p->total_run_ticks, p->total_wait_ticks);
+#endif
   }
 }
