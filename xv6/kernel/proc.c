@@ -514,6 +514,44 @@ kwaitx(uint64 wtime_addr, uint64 rtime_addr, uint64 ttime_addr, uint64 rptime_ad
 }
 
 
+// Elevate all active processes to Queue 0 and reset their time slice ticks.
+void
+priority_boost(void)
+{
+  struct proc *p;
+  for (p = proc; p < &proc[NPROC]; p++) {
+    acquire(&p->lock);
+    if (p->state != UNUSED) {
+      p->priority = 0;
+      p->ticks_used = 0;
+      p->queue_entry_ticks = ticks;
+    }
+    release(&p->lock);
+  }
+}
+
+// Increment waiting ticks for all RUNNABLE processes (excluding SLEEPING),
+// and run ticks for RUNNING process.
+void
+update_proc_ticks(void)
+{
+  struct proc *p;
+  for (p = proc; p < &proc[NPROC]; p++) {
+    acquire(&p->lock);
+    if (p->state == RUNNABLE) {
+      p->total_wait_ticks++;
+    } else if (p->state == RUNNING) {
+      p->total_run_ticks++;
+    }
+#if defined(MLFQ)
+    if (p->pid >= 4 && (p->state == RUNNABLE || p->state == RUNNING || p->state == SLEEPING)) {
+      printk("[PLOT] %d %d %d\n", ticks, p->pid, p->priority);
+    }
+#endif
+    release(&p->lock);
+  }
+}
+
 // On timer interrupt for MLFQ: check higher-priority preemption and slice exhaustion.
 void
 mlfq_check_preempt_and_yield(void)

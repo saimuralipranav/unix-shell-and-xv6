@@ -183,6 +183,12 @@ clockintr()
   if (cpuid() == 0) {
     acquire(&tickslock);
     ticks++;
+    update_proc_ticks();
+#if defined(MLFQ)
+    if (ticks % 48 == 0) {
+      priority_boost();
+    }
+#endif
     wakeup(&ticks);
     release(&tickslock);
   }
