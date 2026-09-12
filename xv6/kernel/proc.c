@@ -563,6 +563,36 @@ scheduler(void)
       found = 1;
       release(&best_p->lock);
     }
+#elif defined(MLFQ)
+    struct proc *best_p = 0;
+    for (int q = 0; q < 4; q++) {
+      for (p = proc; p < &proc[NPROC]; p++) {
+        acquire(&p->lock);
+        if (p->state == RUNNABLE && p->priority == q) {
+          if (best_p == 0 || p->queue_entry_ticks < best_p->queue_entry_ticks) {
+            if (best_p)
+              release(&best_p->lock);
+            best_p = p;
+            continue;
+          }
+        }
+        release(&p->lock);
+      }
+      if (best_p != 0) {
+        break;
+      }
+    }
+
+    if (best_p != 0) {
+      if (best_p->first_run_time == (uint)-1)
+        best_p->first_run_time = ticks;
+      best_p->state = RUNNING;
+      c->proc = best_p;
+      swtch(&c->context, &best_p->context);
+      c->proc = 0;
+      found = 1;
+      release(&best_p->lock);
+    }
 #else
     for (p = proc; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
@@ -628,6 +658,9 @@ yield(void)
   struct proc *p = myproc();
   acquire(&p->lock);
   p->state = RUNNABLE;
+#if defined(MLFQ)
+  p->queue_entry_ticks = ticks;
+#endif
   sched();
   release(&p->lock);
 }
@@ -714,6 +747,10 @@ wakeup(void *chan)
       // go to sleep, also set it back to RUNNING.
       if (p->state == SLEEPING) {
         p->state = RUNNABLE;
+#if defined(MLFQ)
+        p->ticks_used = 0;
+        p->queue_entry_ticks = ticks;
+#endif
       }
     }
     release(&p->lock);
