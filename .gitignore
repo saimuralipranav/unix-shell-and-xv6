@@ -1,4 +1,47 @@
+# Object and build artifacts
+*.o
+*.d
+*.asm
+*.sym
+*.a
+*.so
+*.out
+*.img
+
+# c-shell build artifacts & runtime cache
 c-shell/build/
 c-shell/shell.out
-c-shell/.cshell_frecency
+shell.out
+**/.cshell_frecency
 .cshell_frecency
+
+# xv6 build outputs & kernel images
+xv6/kernel/kernel
+xv6/mkfs/mkfs
+xv6/fs.img
+xv6/user/_*
+xv6/user/usys.S
+xv6/.gdbinit
+TAGS
+
+# Editor and OS backup / swap files
+*~
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.cache/
+
+# Python cache & test artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Temporary logs, test dumps, and core dumps
+*.log
+*.tmp
+core
+core.*

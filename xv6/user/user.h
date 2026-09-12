@@ -25,6 +25,8 @@ char *sys_sbrk(int, int);
 int pause(int);
 int uptime(void);
 int sync(void);
+int waitx(int *wtime, int *rtime);
+int wait_all(int *wtime, int *rtime, int *ttime, int *rptime);
 
 // ulib.c
 int stat(const char *, struct stat *);

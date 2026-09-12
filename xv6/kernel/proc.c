@@ -373,6 +373,7 @@ kexit(int status)
 
   acquire(&p->lock);
 
+  p->exit_time = ticks;
   p->xstate = status;
   p->state = ZOMBIE;
 
@@ -436,6 +437,82 @@ kwait(uint64 addr)
     acquire(&wait_lock);
   }
 }
+
+// Wait for a child process to exit and return its pid,
+// copying out wait time, run time, turnaround time, and response time.
+int
+kwaitx(uint64 wtime_addr, uint64 rtime_addr, uint64 ttime_addr, uint64 rptime_addr)
+{
+  struct proc *pp;
+  int havekids, pid;
+  struct proc *p = myproc();
+
+  acquire(&wait_lock);
+
+  for (;;) {
+    havekids = 0;
+    for (pp = proc; pp < &proc[NPROC]; pp++) {
+      if (pp->parent == p) {
+        acquire(&pp->lock);
+
+        havekids = 1;
+        if (pp->state == ZOMBIE) {
+          pid = pp->pid;
+          if (wtime_addr != 0) {
+            int wtime = (int)pp->total_wait_ticks;
+            if (copyout(p->pagetable, p->sz, wtime_addr, (char *)&wtime, sizeof(int)) < 0) {
+              release(&pp->lock);
+              release(&wait_lock);
+              return -1;
+            }
+          }
+          if (rtime_addr != 0) {
+            int rtime = (int)pp->total_run_ticks;
+            if (copyout(p->pagetable, p->sz, rtime_addr, (char *)&rtime, sizeof(int)) < 0) {
+              release(&pp->lock);
+              release(&wait_lock);
+              return -1;
+            }
+          }
+          if (ttime_addr != 0) {
+            int ttime = (int)(pp->exit_time - pp->creation_time);
+            if (copyout(p->pagetable, p->sz, ttime_addr, (char *)&ttime, sizeof(int)) < 0) {
+              release(&pp->lock);
+              release(&wait_lock);
+              return -1;
+            }
+          }
+          if (rptime_addr != 0) {
+            int rptime = (pp->first_run_time != (uint)-1 && pp->first_run_time >= pp->creation_time) ?
+                         (int)(pp->first_run_time - pp->creation_time) : 0;
+            if (copyout(p->pagetable, p->sz, rptime_addr, (char *)&rptime, sizeof(int)) < 0) {
+              release(&pp->lock);
+              release(&wait_lock);
+              return -1;
+            }
+          }
+          pp->parent = 0;
+          freeproc(pp);
+          release(&pp->lock);
+          release(&wait_lock);
+          return pid;
+        }
+        release(&pp->lock);
+      }
+    }
+
+    if (!havekids || killed(p)) {
+      release(&wait_lock);
+      return -1;
+    }
+
+    sleep_prepare(p);
+    release(&wait_lock);
+    sleep();
+    acquire(&wait_lock);
+  }
+}
+
 
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
