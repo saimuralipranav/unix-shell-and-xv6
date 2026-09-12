@@ -514,6 +514,46 @@ kwaitx(uint64 wtime_addr, uint64 rtime_addr, uint64 ttime_addr, uint64 rptime_ad
 }
 
 
+// On timer interrupt for MLFQ: check higher-priority preemption and slice exhaustion.
+void
+mlfq_check_preempt_and_yield(void)
+{
+  struct proc *p = myproc();
+  if (!p)
+    return;
+
+  acquire(&p->lock);
+  p->ticks_used++;
+
+  int quanta[4] = {1, 4, 8, 16};
+  int slice_expired = (p->ticks_used >= quanta[p->priority]);
+  int higher_runnable = 0;
+
+  for (struct proc *hp = proc; hp < &proc[NPROC]; hp++) {
+    if (hp != p && hp->state == RUNNABLE && hp->priority < p->priority) {
+      higher_runnable = 1;
+      break;
+    }
+  }
+
+  if (slice_expired) {
+    if (p->priority < 3)
+      p->priority++;
+    p->ticks_used = 0;
+    p->queue_entry_ticks = ticks;
+    p->state = RUNNABLE;
+    sched();
+    release(&p->lock);
+  } else if (higher_runnable) {
+    p->queue_entry_ticks = ticks;
+    p->state = RUNNABLE;
+    sched();
+    release(&p->lock);
+  } else {
+    release(&p->lock);
+  }
+}
+
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
 // Scheduler never returns.  It loops, doing:

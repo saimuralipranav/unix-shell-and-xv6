@@ -84,6 +84,9 @@ usertrap(void)
   // give up the CPU if this is a timer interrupt.
 #if defined(FIFO)
   // FIFO is non-preemptive on timer interrupts
+#elif defined(MLFQ)
+  if (which_dev == 2)
+    mlfq_check_preempt_and_yield();
 #else
   if (which_dev == 2)
     yield();
@@ -160,6 +163,9 @@ kerneltrap()
   // give up the CPU if this is a timer interrupt.
 #if defined(FIFO)
   // FIFO is non-preemptive on timer interrupts
+#elif defined(MLFQ)
+  if (which_dev == 2 && myproc() != 0)
+    mlfq_check_preempt_and_yield();
 #else
   if (which_dev == 2 && myproc() != 0)
     yield();
