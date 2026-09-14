@@ -438,8 +438,8 @@ kwait(uint64 addr)
   }
 }
 
-// Wait for a child process to exit and return its pid,
-// copying out wait time, run time, turnaround time, and response time.
+// Wait for a child to exit and copy out its scheduling metrics (wait, run, turnaround, response times)
+// Useful for benchmarking different scheduling algorithms.
 int
 kwaitx(uint64 wtime_addr, uint64 rtime_addr, uint64 ttime_addr, uint64 rptime_addr)
 {
@@ -458,6 +458,7 @@ kwaitx(uint64 wtime_addr, uint64 rtime_addr, uint64 ttime_addr, uint64 rptime_ad
         havekids = 1;
         if (pp->state == ZOMBIE) {
           pid = pp->pid;
+          // Waiting time: total ticks in RUNNABLE state
           if (wtime_addr != 0) {
             int wtime = (int)pp->total_wait_ticks;
             if (copyout(p->pagetable, p->sz, wtime_addr, (char *)&wtime, sizeof(int)) < 0) {
@@ -466,6 +467,7 @@ kwaitx(uint64 wtime_addr, uint64 rtime_addr, uint64 ttime_addr, uint64 rptime_ad
               return -1;
             }
           }
+          // Running time: total ticks in RUNNING state
           if (rtime_addr != 0) {
             int rtime = (int)pp->total_run_ticks;
             if (copyout(p->pagetable, p->sz, rtime_addr, (char *)&rtime, sizeof(int)) < 0) {
@@ -474,6 +476,7 @@ kwaitx(uint64 wtime_addr, uint64 rtime_addr, uint64 ttime_addr, uint64 rptime_ad
               return -1;
             }
           }
+          // Turnaround time = exit_time - creation_time
           if (ttime_addr != 0) {
             int ttime = (int)(pp->exit_time - pp->creation_time);
             if (copyout(p->pagetable, p->sz, ttime_addr, (char *)&ttime, sizeof(int)) < 0) {
@@ -482,6 +485,7 @@ kwaitx(uint64 wtime_addr, uint64 rtime_addr, uint64 ttime_addr, uint64 rptime_ad
               return -1;
             }
           }
+          // Response time = first_run_time - creation_time
           if (rptime_addr != 0) {
             int rptime = (pp->first_run_time != (uint)-1 && pp->first_run_time >= pp->creation_time) ?
                          (int)(pp->first_run_time - pp->creation_time) : 0;
@@ -514,81 +518,87 @@ kwaitx(uint64 wtime_addr, uint64 rtime_addr, uint64 ttime_addr, uint64 rptime_ad
 }
 
 
-// Elevate all active processes to Queue 0 and reset their time slice ticks.
+// Starvation boost: move all active processes back to the highest priority queue (Queue 0)
+// This is typically called at a set interval (e.g., every 48 ticks) to prevent starvation in MLFQ.
 void
 priority_boost(void)
 {
   struct proc *p;
-  for (p = proc; p < &proc[NPROC]; p++) {
+  for (p = proc; p < &proc[NPROC]; p++) { // Iterate all proc entries
     acquire(&p->lock);
     if (p->state != UNUSED) {
-      p->priority = 0;
-      p->ticks_used = 0;
-      p->queue_entry_ticks = ticks;
+      p->priority = 0;              // Elevate to highest queue
+      p->ticks_used = 0;             // Reset slice ticks
+      p->queue_entry_ticks = ticks;  // Reset queue timestamp
     }
     release(&p->lock);
   }
 }
 
-// Increment waiting ticks for all RUNNABLE processes (excluding SLEEPING),
-// and run ticks for RUNNING process.
+// Update run time for the running process and wait time for runnable processes.
+// Called on every timer tick to maintain accurate statistics for scheduling and kwaitx.
 void
 update_proc_ticks(void)
 {
   struct proc *p;
-  for (p = proc; p < &proc[NPROC]; p++) {
+  for (p = proc; p < &proc[NPROC]; p++) { // Scan all proc entries
     acquire(&p->lock);
     if (p->state == RUNNABLE) {
-      p->total_wait_ticks++;
+      p->total_wait_ticks++; // Increment wait tick counter
     } else if (p->state == RUNNING) {
-      p->total_run_ticks++;
+      p->total_run_ticks++;  // Increment run tick counter
     }
 #if defined(MLFQ)
     if (p->pid >= 4 && (p->state == RUNNABLE || p->state == RUNNING || p->state == SLEEPING)) {
-      printk("[PLOT] %d %d %d\n", ticks, p->pid, p->priority);
+      printk("[PLOT] %d %d %d\n", ticks, p->pid, p->priority); // Log priority history for analysis
     }
 #endif
     release(&p->lock);
   }
 }
 
-// On timer interrupt for MLFQ: check higher-priority preemption and slice exhaustion.
+// Timer tick hook for MLFQ:
+// 1. Demote process if it used its full time slice based on its current queue (Q0=1, Q1=4, Q2=8, Q3=16)
+// 2. Preempt the current process if a higher priority process becomes runnable.
 void
 mlfq_check_preempt_and_yield(void)
 {
-  struct proc *p = myproc();
+  struct proc *p = myproc(); // Current running process
   if (!p)
     return;
 
   acquire(&p->lock);
-  p->ticks_used++;
+  p->ticks_used++; // Increment current time slice tick count
 
-  int quanta[4] = {1, 4, 8, 16};
-  int slice_expired = (p->ticks_used >= quanta[p->priority]);
+  int quanta[4] = {1, 4, 8, 16}; // Queue time slice definitions
+  int slice_expired = (p->ticks_used >= quanta[p->priority]); // Check slice expiration
   int higher_runnable = 0;
 
+  // Check if any higher priority queue has a runnable process
   for (struct proc *hp = proc; hp < &proc[NPROC]; hp++) {
     if (hp != p && hp->state == RUNNABLE && hp->priority < p->priority) {
-      higher_runnable = 1;
+      higher_runnable = 1; // Preemption required
       break;
     }
   }
 
   if (slice_expired) {
+    // Demote to next lower queue (max is queue 3)
     if (p->priority < 3)
       p->priority++;
-    p->ticks_used = 0;
-    p->queue_entry_ticks = ticks;
-    p->state = RUNNABLE;
-    sched();
+    p->ticks_used = 0;             // Reset slice
+    p->queue_entry_ticks = ticks;  // Update queue entry time
+    p->state = RUNNABLE;          // Set runnable
+    sched();                       // Context switch
     release(&p->lock);
   } else if (higher_runnable) {
-    p->queue_entry_ticks = ticks;
+    // Yield CPU to higher priority process, keep current queue
+    p->queue_entry_ticks = ticks;  // FIFO queue order preserved
     p->state = RUNNABLE;
-    sched();
+    sched();                       // Context switch
     release(&p->lock);
   } else {
-    release(&p->lock);
+    release(&p->lock); // Retain CPU
   }
 }
 
@@ -607,16 +617,13 @@ scheduler(void)
 
   c->proc = 0;
   for (;;) {
-    // The most recent process to run may have had interrupts
-    // turned off; enable them to avoid a deadlock if all
-    // processes are waiting. Then turn them back off
-    // to avoid a possible race between an interrupt
-    // and wfi.
+    // Avoid deadlock when idle
     intr_on();
     intr_off();
 
     int found = 0;
 #if defined(FIFO)
+    // FIFO: pick runnable process with the earliest creation time
     struct proc *best_p = 0;
     for (p = proc; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
@@ -642,6 +649,7 @@ scheduler(void)
       release(&best_p->lock);
     }
 #elif defined(MLFQ)
+    // MLFQ: scan Q0 -> Q3, pick the oldest runnable process in the highest non-empty queue
     struct proc *best_p = 0;
     for (int q = 0; q < 4; q++) {
       for (p = proc; p < &proc[NPROC]; p++) {
@@ -672,6 +680,7 @@ scheduler(void)
       release(&best_p->lock);
     }
 #else
+    // Default Round Robin: round-robin scan through all procs
     for (p = proc; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
       if (p->state == RUNNABLE) {
@@ -826,6 +835,7 @@ wakeup(void *chan)
       if (p->state == SLEEPING) {
         p->state = RUNNABLE;
 #if defined(MLFQ)
+        // Voluntary I/O yield: stays in current queue with fresh time slice
         p->ticks_used = 0;
         p->queue_entry_ticks = ticks;
 #endif

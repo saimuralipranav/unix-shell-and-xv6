@@ -14,6 +14,7 @@
 #include <ctype.h>
 #include <signal.h>
 
+// Linux x86_64 system call table mapping numbers to human names
 static const char *syscall_names[] = {
     [0] = "read", [1] = "write", [2] = "open", [3] = "close",
     [4] = "stat", [5] = "fstat", [6] = "lstat", [7] = "poll",
@@ -102,37 +103,42 @@ static const char *syscall_names[] = {
     [439] = "faccessat2", [440] = "process_madvise"
 };
 
+// Highest index represented in syscall_names table
 #define SYSCALL_MAX ((int)(sizeof(syscall_names) / sizeof(syscall_names[0])))
 
+// Data structure tracking per-syscall execution metrics
 typedef struct {
-    long sc_num;
-    char name[64];
-    int calls;
-    double total_time;
-    int first_order;
+    long sc_num;        // Syscall number
+    char name[64];      // Syscall name
+    int calls;          // Total number of invocations
+    double total_time;  // Cumulative elapsed execution time
+    int first_order;    // Tie-breaker order of appearance
 } SnoopStat;
 
 #define MAX_SNOOP_STATS 1024
-static SnoopStat stats[MAX_SNOOP_STATS];
-static int stat_count = 0;
+static SnoopStat stats[MAX_SNOOP_STATS]; // Static stat storage
+static int stat_count = 0;              // Current tracked distinct syscall count
 
+// Look up name for syscall number or format fallback
 static void get_syscall_name_str(long sc_num, char *buf, size_t max_len) {
     if (sc_num >= 0 && sc_num < SYSCALL_MAX && syscall_names[sc_num] != NULL) {
         strncpy(buf, syscall_names[sc_num], max_len - 1);
         buf[max_len - 1] = '\0';
-    } else {
+    } else { // Fallback generic name
         snprintf(buf, max_len, "syscall_%ld", sc_num);
     }
 }
 
+// Record an invocation and elapsed time for a syscall
 static void record_syscall(long sc_num, double elapsed) {
-    for (int i = 0; i < stat_count; i++) {
+    for (int i = 0; i < stat_count; i++) { // Check existing entry
         if (stats[i].sc_num == sc_num) {
             stats[i].calls++;
             stats[i].total_time += elapsed;
             return;
         }
     }
+    // Allocate new tracking entry
     if (stat_count < MAX_SNOOP_STATS) {
         stats[stat_count].sc_num = sc_num;
         get_syscall_name_str(sc_num, stats[stat_count].name, sizeof(stats[stat_count].name));
@@ -143,122 +149,148 @@ static void record_syscall(long sc_num, double elapsed) {
     }
 }
 
+// Sort comparator: descending calls, ties broken by first appearance
 static int compare_snoop_stats(const void *a, const void *b) {
     const SnoopStat *sa = (const SnoopStat *)a;
     const SnoopStat *sb = (const SnoopStat *)b;
     if (sb->calls != sa->calls) {
-        return sb->calls - sa->calls; // descending by calls
+        return sb->calls - sa->calls; // Descending by call count
     }
-    return sa->first_order - sb->first_order; // break ties by first occurrence
+    return sa->first_order - sb->first_order; // Ascending by first seen order
 }
 
+// Builtin command: snoop <command> or snoop -p <pid>
 int builtin_snoop(Command *cmd) {
-    if (cmd == NULL || cmd->argc < 2) {
+    if (cmd == NULL || cmd->argc < 2) { // Validate command arguments
         fprintf(stderr, "snoop: command not found\n");
         return 1;
     }
 
-    stat_count = 0;
+    stat_count = 0; // Reset metrics
     pid_t target_pid = -1;
-    bool is_attach = false;
+    bool is_attach = false; // Mode flag: attach vs spawn
 
+    // Block SIGCHLD while snoop runs so the shell's async SIGCHLD handler doesn't steal trace events
+    sigset_t chld_mask, old_mask;
+    sigemptyset(&chld_mask);
+    sigaddset(&chld_mask, SIGCHLD);
+    sigprocmask(SIG_BLOCK, &chld_mask, &old_mask);
+
+    // Parse -p <pid> attach flag
     if (strcmp(cmd->args[1], "-p") == 0) {
         if (cmd->argc < 3) {
             fprintf(stderr, "snoop: no such process\n");
+            sigprocmask(SIG_SETMASK, &old_mask, NULL);
             return 1;
         }
-        for (int i = 0; cmd->args[2][i] != '\0'; i++) {
+        for (int i = 0; cmd->args[2][i] != '\0'; i++) { // Ensure PID is all digits
             if (!isdigit((unsigned char)cmd->args[2][i])) {
                 fprintf(stderr, "snoop: no such process\n");
+                sigprocmask(SIG_SETMASK, &old_mask, NULL);
                 return 1;
             }
         }
-        target_pid = (pid_t)atoi(cmd->args[2]);
-        if (target_pid <= 0 || kill(target_pid, 0) != 0) {
+        target_pid = (pid_t)atoi(cmd->args[2]); // Parse target pid
+        if (target_pid <= 0 || kill(target_pid, 0) != 0) { // Verify process exists
             fprintf(stderr, "snoop: no such process\n");
+            sigprocmask(SIG_SETMASK, &old_mask, NULL);
             return 1;
         }
-        if (ptrace(PTRACE_ATTACH, target_pid, NULL, NULL) == -1) {
+        if (ptrace(PTRACE_ATTACH, target_pid, NULL, NULL) == -1) { // Attach to process
             fprintf(stderr, "snoop: no such process\n");
+            sigprocmask(SIG_SETMASK, &old_mask, NULL);
             return 1;
         }
-        is_attach = true;
+        is_attach = true; // Mark attached
         int status;
-        waitpid(target_pid, &status, 0);
+        waitpid(target_pid, &status, 0); // Wait for initial stop
     } else {
+        // Spawn mode: resolve binary path
         char resolved_path[MAX_PATH];
         if (!resolve_command(cmd->args[1], resolved_path, sizeof(resolved_path))) {
             fprintf(stderr, "snoop: command not found\n");
+            sigprocmask(SIG_SETMASK, &old_mask, NULL);
             return 1;
         }
 
+        // Fork child to execute command
         target_pid = fork();
         if (target_pid < 0) {
             perror("fork");
+            sigprocmask(SIG_SETMASK, &old_mask, NULL);
             return 1;
         }
 
         if (target_pid == 0) {
-            // Child
+            // Child process: unblock SIGCHLD, request tracing and halt
+            sigprocmask(SIG_SETMASK, &old_mask, NULL);
             ptrace(PTRACE_TRACEME, 0, NULL, NULL);
-            raise(SIGSTOP);
-            execv(resolved_path, &cmd->args[1]);
+            raise(SIGSTOP); // Stop until parent configures ptrace
+            execv(resolved_path, &cmd->args[1]); // Execute target binary
             perror("execv");
             exit(127);
         }
 
+        // Parent: wait for child SIGSTOP
         int status;
         waitpid(target_pid, &status, 0);
     }
 
+    // Set ptrace options: distinguish syscall traps with bit 7
     ptrace(PTRACE_SETOPTIONS, target_pid, 0, PTRACE_O_TRACESYSGOOD);
-    ptrace(PTRACE_SYSCALL, target_pid, NULL, NULL);
+    ptrace(PTRACE_SYSCALL, target_pid, NULL, NULL); // Resume until next syscall
 
-    bool in_syscall = false;
-    long current_sc = -1;
-    struct timespec start_time = {0, 0};
+    bool in_syscall = false;            // Syscall entry vs exit state
+    long current_sc = -1;               // Current syscall number
+    struct timespec start_time = {0, 0}; // Monotonic start timestamp
 
+    // Trace loop
     while (true) {
         int status;
-        pid_t res = waitpid(target_pid, &status, 0);
-        if (res <= 0) break;
+        pid_t res = waitpid(target_pid, &status, 0); // Wait for tracee event
+        if (res <= 0) break; // Break on error or non-positive result
 
-        if (WIFEXITED(status) || WIFSIGNALED(status)) {
+        if (WIFEXITED(status) || WIFSIGNALED(status)) { // Child terminated
             break;
         }
 
-        if (WIFSTOPPED(status)) {
+        if (WIFSTOPPED(status)) { // Child stopped
             int sig = WSTOPSIG(status);
 
-            if (sig == (SIGTRAP | 0x80)) {
+            if (sig == (SIGTRAP | 0x80)) { // Syscall stop indicated by TRACESYSGOOD
                 struct user_regs_struct regs;
                 if (ptrace(PTRACE_GETREGS, target_pid, NULL, &regs) == 0) {
-                    long sc_num = (long)regs.orig_rax;
-                    if (!in_syscall) {
+                    long sc_num = (long)regs.orig_rax; // Read syscall number from orig_rax
+                    if (!in_syscall) { // Syscall entry
                         in_syscall = true;
                         current_sc = sc_num;
-                        clock_gettime(CLOCK_MONOTONIC, &start_time);
-                    } else {
+                        clock_gettime(CLOCK_MONOTONIC, &start_time); // Record start time
+                    } else { // Syscall exit
                         in_syscall = false;
                         struct timespec end_time;
-                        clock_gettime(CLOCK_MONOTONIC, &end_time);
+                        clock_gettime(CLOCK_MONOTONIC, &end_time); // Record end time
                         double elapsed = (end_time.tv_sec - start_time.tv_sec) +
                                          (end_time.tv_nsec - start_time.tv_nsec) / 1e9;
-                        if (elapsed < 0) elapsed = 0;
-                        record_syscall(current_sc, elapsed);
+                        if (elapsed < 0) elapsed = 0; // Guard against clock skew
+                        record_syscall(current_sc, elapsed); // Store measurement
                     }
                 }
-                ptrace(PTRACE_SYSCALL, target_pid, NULL, NULL);
+                ptrace(PTRACE_SYSCALL, target_pid, NULL, NULL); // Continue to next syscall
             } else {
+                // Forward other signals, suppressing internal ptrace stops
                 int deliver_sig = (sig == SIGSTOP || sig == SIGTRAP) ? 0 : sig;
                 ptrace(PTRACE_SYSCALL, target_pid, NULL, (void *)(intptr_t)deliver_sig);
             }
         }
     }
 
+    // Detach if attached to external PID
     if (is_attach) {
         ptrace(PTRACE_DETACH, target_pid, NULL, NULL);
     }
+
+    // Unblock SIGCHLD after tracee loop completes
+    sigprocmask(SIG_SETMASK, &old_mask, NULL);
 
     // Sort summary table: call count descending, break ties by first occurrence
     qsort(stats, stat_count, sizeof(SnoopStat), compare_snoop_stats);
@@ -269,5 +301,5 @@ int builtin_snoop(Command *cmd) {
         printf("%-13s %-7d %.3fs\n", stats[i].name, stats[i].calls, stats[i].total_time);
     }
 
-    return 0;
+    return 0; // Success // Success
 }

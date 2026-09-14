@@ -1,5 +1,6 @@
 CC := gcc
-CFLAGS := -std=c2x -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700 \
+STD := $(shell $(CC) -std=c23 -E -x c /dev/null >/dev/null 2>&1 && echo -std=c23 || echo -std=c2x)
+CFLAGS := $(STD) -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700 \
           -Wall -Wextra -Werror -Wno-unused-parameter -fno-asm \
           -Iinclude
 LDFLAGS :=

@@ -189,13 +189,13 @@ def generate_svg(data, output_svg_path):
     print(f"Plot successfully saved to {output_svg_path}")
 
 def main():
-    log_path = "/home/smp/CSO/mini1/xv6/mlfq_output.txt"
-    if not os.path.exists(log_path):
-        log_path = "/home/smp/.gemini/antigravity-ide/brain/1cfd8d16-2da5-4e9b-bd2e-da10f0bbc981/scratch/mlfq_output.txt"
+    log_path = "mlfq_output.txt"
     if len(sys.argv) > 1:
         log_path = sys.argv[1]
+    elif not os.path.exists(log_path):
+        log_path = "/home/smp/.gemini/antigravity-ide/brain/1cfd8d16-2da5-4e9b-bd2e-da10f0bbc981/scratch/mlfq_output.txt"
 
-    output_path = "/home/smp/CSO/mini1/xv6/mlfq_timeline.svg"
+    output_path = "mlfq_timeline.svg"
     if len(sys.argv) > 2:
         output_path = sys.argv[2]
 

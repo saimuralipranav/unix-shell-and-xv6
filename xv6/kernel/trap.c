@@ -180,16 +180,16 @@ kerneltrap()
 void
 clockintr()
 {
-  if (cpuid() == 0) {
+  if (cpuid() == 0) { // Only hart 0 increments global tick count
     acquire(&tickslock);
-    ticks++;
-    update_proc_ticks();
+    ticks++;                // Increment global ticks
+    update_proc_ticks();    // Accumulate wait/run ticks for active procs
 #if defined(MLFQ)
-    if (ticks % 48 == 0) {
-      priority_boost();
+    if (ticks % 48 == 0) {  // Periodic priority boost every 48 ticks to prevent starvation
+      priority_boost();     // Reset all runnable procs to Q0
     }
 #endif
-    wakeup(&ticks);
+    wakeup(&ticks);         // Wake sleeping processes
     release(&tickslock);
   }
 

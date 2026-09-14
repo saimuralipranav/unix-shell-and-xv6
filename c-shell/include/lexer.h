@@ -3,20 +3,22 @@
 
 #include <stdbool.h>
 
+// Lexical token categories recognized by c-shell
 typedef enum {
-    TOKEN_EOF = 0,
-    TOKEN_WORD,
-    TOKEN_PIPE,  // |
-    TOKEN_AMP,   // &
-    TOKEN_SEMI,  // ;
-    TOKEN_LT,    // <
-    TOKEN_GT,    // >
-    TOKEN_GTGT,  // >>
+    TOKEN_EOF = 0, // End of input token
+    TOKEN_WORD,    // Shell command, argument, or file path
+    TOKEN_PIPE,    // Pipeline separator '|'
+    TOKEN_AMP,     // Background operator '&'
+    TOKEN_SEMI,    // Command sequence separator ';'
+    TOKEN_LT,      // Input redirection '<'
+    TOKEN_GT,      // Output redirection '>'
+    TOKEN_GTGT,    // Output append redirection '>>'
 } TokenType;
 
+// Token representation
 typedef struct {
-    TokenType type;
-    char *value; // Allocated string for WORD, NULL for operators
+    TokenType type; // Classification of token
+    char *value;    // Allocated string for WORD, NULL for operators
 } Token;
 
 // Frees the allocated memory inside the token array
